@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: migration-tool
+  shell:
+    interactive:
+      enabled: true
+    script:
+      enabled: true

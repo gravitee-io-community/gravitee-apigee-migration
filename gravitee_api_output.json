@@ -1,0 +1,2363 @@
+{
+  "api" : {
+    "definitionVersion" : "V4",
+    "type" : "PROXY",
+    "id" : "24db2238-cd74-4b2c-bf06-0d84ee502da5",
+    "name" : "AFT_COR_ERP_Accounts",
+    "description" : "API Proxy for Project/Task/Exp/Org/Project-Task lookup and CoA/POET Validation/PT Validation from source to Oracle.",
+    "apiVersion" : "4.0",
+    "createdAt" : "2023-08-17T21:28:58.313Z",
+    "updatedAt" : "2023-08-17T21:28:58.313Z",
+    "listeners" : [ {
+      "type" : "HTTP",
+      "paths" : [ {
+        "path" : "/erp/fin/v5/accounts",
+        "overrideAccess" : false,
+        "host" : "PrProdVHost"
+      } ],
+      "entrypoints" : [ {
+        "type" : "http-proxy",
+        "qos" : "AUTO",
+        "configuration" : { }
+      } ]
+    } ],
+    "endpointGroups" : [ {
+      "name" : "default-endpoint",
+      "type" : "http-proxy",
+      "services" : { },
+      "loadBalancer" : {
+        "type" : "ROUND_ROBIN"
+      },
+      "sharedConfiguration" : {
+        "ssl" : {
+          "trustAll" : false,
+          "hostNameVerifier" : true,
+          "keyStore" : {
+            "type" : ""
+          },
+          "trustStore" : {
+            "type" : ""
+          }
+        }
+      },
+      "endpoints" : [ {
+        "name" : "CoA-Validation",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['ORACLE_DYNAMIC_URL']}/fscmService/AccountCombinationService"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "Expenditure-Types-Lookup",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['OIC_DYNAMIC_URL']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_EXP_SEG_INT/1.0/exp"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "Organizations-Lookup",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['OIC_DYNAMIC_URL']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_ORG_SEG_INT/1.0/org"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "POET-Validation",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['OIC_DYNAMIC_URL']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_VALIDATION_INT/1.0/poetvalidation"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "Project-Lookup",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['OIC_DYNAMIC_URL']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PROJECT_SEG_INT/1.0/projects"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "Project-Task-Lookup",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['OIC_DYNAMIC_URL']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PT_SEG_INT/1.0/projecttasks"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "PTValidation",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['{OIC_DYNAMIC_URL}']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PT_SEG_INT/2.0/projecttasks"
+        },
+        "services" : { },
+        "secondary" : false
+      }, {
+        "name" : "Task-Lookup",
+        "type" : "http-proxy",
+        "weight" : 1,
+        "inheritConfiguration" : true,
+        "configuration" : {
+          "target" : "https://{#context.attributes['OIC_DYNAMIC_URL']}/ic/api/integration/v1/flows/rest/SOCO_PA_POET_TASK_SEG_INT/1.0/tasks"
+        },
+        "services" : { },
+        "secondary" : false
+      } ]
+    } ]
+  },
+  "plans" : [ {
+    "definitionVersion" : "V4",
+    "id" : "ca645c0d-e604-4ddc-8811-dedf3ec3f976",
+    "description" : "AFT_COR_ERP_Accounts-plan",
+    "status" : "PUBLISHED",
+    "validation" : "MANUAL",
+    "name" : "AFT_COR_ERP_Accounts",
+    "security" : {
+      "type" : "API_KEY",
+      "configuration" : { }
+    },
+    "flows" : [ {
+      "id" : "1113dc0c-ff33-48c9-8faf-91e4389ffb1d",
+      "name" : "PreFlow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "CONDITION",
+        "condition" : "true"
+      } ],
+      "request" : [ {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      }, {
+        "condition" : "!#request.path.matches(\"/chart-of-accounts\")",
+        "name" : "AM-Accounts-Product",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "Product",
+            "value" : "Oracle.IC"
+          }, {
+            "name" : "CORS.AllowHeaders",
+            "value" : "origin, x-requested-with, accept, content-type, authorization, soco-proxy-api-key, soco-proxy-env, x-correlation-id"
+          }, {
+            "name" : "CORS.MaxAge",
+            "value" : "1"
+          }, {
+            "name" : "CORS.AllowMethods",
+            "value" : "POST"
+          } ]
+        }
+      }, {
+        "condition" : "#request.path.matches(\"/chart-of-accounts\")",
+        "name" : "AM-CoAValidation-Product",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "Product",
+            "value" : "Oracle.ERP"
+          }, {
+            "name" : "CORS.AllowHeaders",
+            "value" : "origin, x-requested-with, accept, content-type, authorization, soco-proxy-api-key, soco-proxy-env, x-correlation-id"
+          }, {
+            "name" : "CORS.MaxAge",
+            "value" : "1"
+          }, {
+            "name" : "CORS.AllowMethods",
+            "value" : "POST"
+          } ]
+        }
+      }, {
+        "condition" : "(SpikeArrest.Differentiator = \"APIProxy\" or proxy.pathsuffix = \"\") and (#request.method != \"OPTIONS\")",
+        "name" : "AM-Get-SpikeArrestLimit-Key-ProxyLevel",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "SpikeArrest.Identifier",
+            "value" : "{#context.getVariable('DeveloperApp.Name')}.{#context.getVariable('apiproxy.name')}"
+          }, {
+            "name" : "SpikeArrest.KVM.Key",
+            "value" : "{#context.getVariable('apiproxy.name')}"
+          } ]
+        }
+      }, {
+        "condition" : "(#request.method != \"OPTIONS\")",
+        "name" : "Spike-Arrest-Policy-KVM",
+        "enabled" : true,
+        "policy" : "spike-arrest",
+        "configuration" : {
+          "async" : false,
+          "addHeaders" : true,
+          "spike" : {
+            "limit" : 3000,
+            "periodTime" : 1,
+            "periodTimeUnit" : "SECONDS"
+          }
+        }
+      }, {
+        "condition" : "#request.method == \"OPTIONS\" AND request.header.origin != null AND request.header.Access-Control-Request-Method != null",
+        "name" : "Spike-Arrest-Policy-Static",
+        "enabled" : true,
+        "policy" : "spike-arrest",
+        "configuration" : {
+          "async" : false,
+          "addHeaders" : true,
+          "spike" : {
+            "limit" : 3000,
+            "periodTime" : 1,
+            "periodTimeUnit" : "SECONDS",
+            "key" : "{#request.headers['origin']}"
+          }
+        }
+      }, {
+        "name" : "AM-Get-Header-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "API.ConsumerKey",
+            "value" : "{#request.headers['Soco-Proxy-API-Key'] ?: #request.headers['Proxy-Authenticate']}"
+          }, {
+            "name" : "API.Environment",
+            "value" : "{#request.headers['Soco-Proxy-Env'] ?: #request.headers['Proxy-Env'] ?: 'Default'}"
+          }, {
+            "name" : "API.TargetEnv",
+            "value" : "{#context.getVariable('Product')}.{#context.getVariable('API.Environment')}"
+          }, {
+            "name" : "API.TmpEnv",
+            "value" : "{#context.getVariable('API.TargetEnv')}"
+          }, {
+            "name" : "ProxyEnvHeader",
+            "value" : "{#context.getVariable('API.Environment')}"
+          } ]
+        }
+      }, {
+        "condition" : "(API.Environment == null) OR (API.Environment == \"\")",
+        "name" : "AM-Set-Env-Attributes-If-Empty",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "API.Environment",
+            "value" : "Default"
+          }, {
+            "name" : "API.TargetEnv",
+            "value" : "{#context.getVariable('Product')}.{#context.getVariable('API.Environment')}"
+          }, {
+            "name" : "API.TmpEnv",
+            "value" : "{#context.getVariable('API.TargetEnv')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-CS-Account-Details",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "CoolSecurityAccountName-JSONPath",
+            "value" : "$.name"
+          }, {
+            "name" : "CoolSecuritySID-JSONPath",
+            "value" : "$.sub"
+          }, {
+            "name" : "CoolSecurityAccountName",
+            "value" : "{#jsonPath(#context.getVariable('CoolSecurityAccountName-JSONPath'), #context.getVariable('jwt.Verify-Cool-Security-JWT.payload-json'))}"
+          }, {
+            "name" : "CoolSecuritySID",
+            "value" : "{#jsonPath(#context.getVariable('CoolSecuritySID-JSONPath'), #context.getVariable('jwt.Verify-Cool-Security-JWT.payload-json'))}"
+          }, {
+            "name" : "UserCredentials.Key",
+            "value" : "{#context.getVariable('API.TargetEnv')}.{#context.getVariable('CoolSecurityAccountName')}.{#context.getVariable('CoolSecuritySID')}"
+          } ]
+        }
+      }, {
+        "condition" : "(lookupcache.LC-Get-Oracle-OAuth-Token.cachehit = false)",
+        "name" : "AM-Get-KVM-Keys",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ReplaceKey",
+            "value" : "{#context.getVariable('Product')}."
+          }, {
+            "name" : "API.Environment",
+            "value" : "{#replaceAll(#context.getVariable('API.TargetEnv'), #context.getVariable('ReplaceKey'), '')}"
+          }, {
+            "name" : "IDCS.ConsumerSecret.Key",
+            "value" : "{#context.getVariable('IDCS')}.{#context.getVariable('API.Environment')}.{#context.getVariable('Apigee')}.{#context.getVariable('KeySecret')}"
+          }, {
+            "name" : "IDCS.ScopeKVM.Key",
+            "value" : "{#context.getVariable('Product')}.{#context.getVariable('API.Environment')}"
+          }, {
+            "name" : "IDCS.UserCredentials.Key",
+            "value" : "{#context.getVariable('Product')}.{#context.getVariable('API.Environment')}.{#context.getVariable('CoolSecurityAccountName')}.{#context.getVariable('CoolSecuritySID')}"
+          }, {
+            "name" : "IDCS.TargetURL.Key",
+            "value" : "{#context.getVariable('Oracle')}.{#context.getVariable('IDCS')}.{#context.getVariable('API.Environment')}"
+          } ]
+        }
+      }, {
+        "condition" : "(lookupcache.LC-Get-Oracle-OAuth-Token.cachehit = false)",
+        "name" : "AM-Set-IDCS-Target-Payload-Params",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "servicecallout.SC-Get-IDCS-OAuth-Token.target.url",
+            "value" : "IDCS.TargetEndpoint"
+          } ]
+        }
+      }, {
+        "condition" : "{lookupcache.LC-Get-Oracle-OAuth-Token.cachehit = false}",
+        "name" : "EV-Get-IDCS-AccessToken",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "IDCS.OAuth.AccessToken",
+            "value" : "{#jsonPath(#request.content, '$.access_token')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Auth-Header-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "Bearer {IDCS.OAuth.AccessToken}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-API-Key-Header-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "apikey",
+            "value" : "{private.password}"
+          } ]
+        }
+      }, {
+        "condition" : "(Product !~ \"Oracle.*\")",
+        "name" : "AM-Set-Auth-Header-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "Basic {private.basicAuth}"
+          } ]
+        }
+      } ],
+      "response" : [ ]
+    }, {
+      "id" : "b97205d8-a690-42e3-8654-99de38e74bb2",
+      "name" : "Chart-Of-Accounts",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/chart-of-accounts",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "JSON-To-XML-Convert-Request",
+        "enabled" : true,
+        "policy" : "json-xml",
+        "configuration" : {
+          "rootElement" : "Root"
+        }
+      }, {
+        "name" : "XML-To-SOAP-Object-XSL-Transform-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['request']}"
+        }
+      }, {
+        "name" : "XML-To-SOAP-Object-XSL-Transform",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" xmlns:acc=\"http://xmlns.oracle.com/apps/financials/generalLedger/accounts/codeCombinations/accountCombinationService/\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:typ=\"http://xmlns.oracle.com/apps/financials/generalLedger/accounts/codeCombinations/accountCombinationService/types/\" version=\"1.0\">\r\n<xsl:output encoding=\"utf-8\" indent=\"yes\" method=\"xml\" version=\"1.0\"/>\r\n<xsl:strip-space elements=\"*\"/>\r\n<xsl:template match=\"/*[local-name()='Array']\">\r\n    <!--Adding SOAP namespaces-->\r\n    <soapenv:Envelope>\r\n        <soapenv:Header/>\r\n        <soapenv:Body>\r\n            <typ:validateAndCreateAccounts>\r\n\t\t\t<xsl:for-each select=\"*[local-name()='Item']\">\r\n    \t\t\t<typ:validationInputRowList>\r\n    \t\t\t<acc:DynamicInsertion><xsl:value-of select=\"*[local-name()='DynamicInsertion']\"/></acc:DynamicInsertion>\r\n                <acc:Segment1><xsl:value-of select=\"*[local-name()='Segment1']\"/></acc:Segment1>\r\n                <acc:Segment2><xsl:value-of select=\"*[local-name()='Segment2']\"/></acc:Segment2>\r\n                <acc:Segment3><xsl:value-of select=\"*[local-name()='Segment3']\"/></acc:Segment3>\r\n                <acc:Segment4><xsl:value-of select=\"*[local-name()='Segment4']\"/></acc:Segment4>\r\n                <acc:Segment5><xsl:value-of select=\"*[local-name()='Segment5']\"/></acc:Segment5>\r\n                <acc:Segment6><xsl:value-of select=\"*[local-name()='Segment6']\"/></acc:Segment6>\r\n                <acc:Segment7><xsl:value-of select=\"*[local-name()='Segment7']\"/></acc:Segment7>\r\n                <acc:Segment8><xsl:value-of select=\"*[local-name()='Segment8']\"/></acc:Segment8>\r\n                <acc:LedgerName><xsl:value-of select=\"*[local-name()='LedgerName']\"/></acc:LedgerName>\r\n    \t\t\t</typ:validationInputRowList>\r\n\t\t\t</xsl:for-each>\r\n            </typ:validateAndCreateAccounts>\r\n        </soapenv:Body>\r\n    </soapenv:Envelope>\r\n</xsl:template>\r\n</xsl:stylesheet>"
+        }
+      }, {
+        "name" : "XML-To-SOAP-Object-XSL-Transform-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "transformedpayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "Remove-Namespaces-XSL-Transform-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['response']}"
+        }
+      }, {
+        "name" : "Remove-Namespaces-XSL-Transform",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\r\n  <xsl:output indent=\"yes\" method=\"xml\"/>\r\n\r\n  <xsl:template match=\"*\">\r\n    <xsl:element name=\"{local-name(.)}\">\r\n      <xsl:apply-templates select=\"@* | node()\"/>\r\n    </xsl:element>\r\n  </xsl:template>\r\n  <xsl:template match=\"@*\">\r\n    <xsl:attribute name=\"{local-name(.)}\">\r\n      <xsl:value-of select=\".\"/>\r\n    </xsl:attribute>\r\n  </xsl:template>\r\n</xsl:stylesheet>"
+        }
+      }, {
+        "name" : "Remove-Nill-Attributes-XSL-Transform-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['response']}"
+        }
+      }, {
+        "name" : "Remove-Nill-Attributes-XSL-Transform",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\r\n<xsl:template match=\"*/@*\"/>\r\n<xsl:template match=\"@*|node()\">\r\n<xsl:copy>\r\n<xsl:apply-templates select=\"@*|node()\"/>\r\n</xsl:copy>\r\n</xsl:template>\r\n</xsl:stylesheet>"
+        }
+      }, {
+        "name" : "Remove-Empty-Nodes-XSL-Transform-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['response']}"
+        }
+      }, {
+        "name" : "Remove-Empty-Nodes-XSL-Transform",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\r\n <xsl:output indent=\"yes\" omit-xml-declaration=\"no\"/>\r\n <xsl:strip-space elements=\"*\"/>\r\n <xsl:template match=\"node()|@*\">\r\n     <xsl:copy>\r\n       <xsl:apply-templates select=\"node()|@*\"/>\r\n     </xsl:copy>\r\n </xsl:template>\r\n <xsl:template match=\"*[not(@*|*|comment()|processing-instruction())      and normalize-space()=''       ]\"/>\r\n</xsl:stylesheet>"
+        }
+      }, {
+        "name" : "XSL-Transform-COA-Response-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['response']}"
+        }
+      }, {
+        "name" : "XSL-Transform-COA-Response",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ns0=\"http://xmlns.oracle.com/apps/financials/generalLedger/accounts/codeCombinations/accountCombinationService/types/\" xmlns:ns1=\"http://xmlns.oracle.com/apps/financials/generalLedger/accounts/codeCombinations/accountCombinationService/\" xmlns:ns2=\"http://xmlns.oracle.com/apps/financials/generalLedger/accounts/codeCombinations/accountCombinationService/types/\" version=\"1.0\">\r\n<xsl:output encoding=\"utf-8\" indent=\"yes\" method=\"xml\" version=\"1.0\"/>\r\n<xsl:strip-space elements=\"*\"/>\r\n\r\n<xsl:template match=\"Envelope\">\r\n   <Array>\r\n\t  <xsl:for-each select=\"Body/validateAndCreateAccountsResponse/result\">\r\n    \t  <result>\r\n    \t    <Segment1><xsl:value-of select=\"Segment1\"/></Segment1>\r\n            <Segment2><xsl:value-of select=\"Segment2\"/></Segment2>\r\n            <Segment3><xsl:value-of select=\"Segment3\"/></Segment3>\r\n            <Segment4><xsl:value-of select=\"Segment4\"/></Segment4>\r\n            <Segment5><xsl:value-of select=\"Segment5\"/></Segment5>\r\n            <Segment6><xsl:value-of select=\"Segment6\"/></Segment6>\r\n            <Segment7><xsl:value-of select=\"Segment7\"/></Segment7>\r\n            <Segment8><xsl:value-of select=\"Segment8\"/></Segment8>\r\n            <Status><xsl:value-of select=\"Status\"/></Status>\r\n            <LedgerName><xsl:value-of select=\"LedgerName\"/></LedgerName>\r\n            <xsl:choose>\r\n                 <xsl:when test=\"Error\">\r\n                      <Error><xsl:value-of select=\"Error\"/></Error>\r\n                      <ErrorCode><xsl:value-of select=\"ErrorCode\"/></ErrorCode>\r\n                 </xsl:when>\r\n                 \r\n            </xsl:choose>\r\n    \t  </result>\r\n\t  </xsl:for-each>\r\n    </Array>\r\n</xsl:template>\r\n</xsl:stylesheet>"
+        }
+      }, {
+        "name" : "XML-To-JSON-Convert-Response-Treat-As-Array",
+        "enabled" : true,
+        "policy" : "xml-json",
+        "configuration" : {
+          "scope" : "RESPONSE"
+        }
+      } ]
+    }, {
+      "id" : "f3ede8b4-0488-40cb-87e2-19c0c593d030",
+      "name" : "Lookup-Service-Validation",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "CONDITION",
+        "condition" : "{(#request.path.matches('/projects') || #request.path.matches('/tasks'))}",
+        "methods" : [ ]
+      } ],
+      "request" : [ {
+        "condition" : "(SourceRequest.ContentType ~ \"*xml*\")",
+        "name" : "AM-Set-Request-Content-Type-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "condition" : "",
+        "name" : "EV-Project-Details",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "requestPayload.ProjectNumber",
+            "value" : "{#jsonPath(#request.content, '$.Pi_Project_Number')}"
+          } ]
+        }
+      } ],
+      "response" : [ ]
+    }, {
+      "id" : "7fba76f3-441e-4785-b15d-c88f62c11146",
+      "name" : "CoA-Validation-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/chart-of-accounts",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-CoA",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/fscmService/AccountCombinationService"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-CoA-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "text/xml"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-CoA-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-CoA-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['transformedpayload']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['CoA-Validation']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-CoA",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/fscmService/AccountCombinationService"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-CoA-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "text/xml"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-CoA-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-CoA-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['transformedpayload']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "d16e451c-cb51-438e-a74f-001f9f2ff02a",
+      "name" : "Project-Lookup-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/projects",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-Project",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PROJECT_SEG_INT/1.0/projects"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Project-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Project-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Project-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['Project-Lookup']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-Project",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PROJECT_SEG_INT/1.0/projects"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Project-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Project-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Project-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "52b20c5d-4db4-4c2b-ae4b-ce8edacecd27",
+      "name" : "Organizations-Lookup-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/organizations",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-Org",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_ORG_SEG_INT/2.0/org"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Org-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Org-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Org-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['Organizations-Lookup']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-Org",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_ORG_SEG_INT/2.0/org"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Org-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Org-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Org-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "064b5221-be15-451b-a3f5-b50d8197138c",
+      "name" : "Expenditure-Types-Lookup-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/expenditure-types",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-Exp",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_EXP_SEG_INT/1.0/exp"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Exp-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Exp-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Exp-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['Expenditure-Types-Lookup']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-Exp",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_EXP_SEG_INT/1.0/exp"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Exp-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Exp-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Exp-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "b0fd7f21-c684-4a25-bb96-37b2a6e27640",
+      "name" : "Task-Lookup-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/tasks",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-Task",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_TASK_SEG_INT/1.0/tasks"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Task-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Task-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Task-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['Task-Lookup']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-Task",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_TASK_SEG_INT/1.0/tasks"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Task-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-Task-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-Task-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "7fbdeec1-b3b5-4e0d-b2b0-62892dbffe77",
+      "name" : "Project-Task-Lookup-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/project-tasks",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-ProjectTask",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PT_SEG_INT/1.0/projecttasks"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-ProjectTask-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-ProjectTask-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-ProjectTask-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['Project-Task-Lookup']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-ProjectTask",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_PT_SEG_INT/1.0/projecttasks"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-ProjectTask-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-ProjectTask-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-ProjectTask-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "6c1a6216-5717-4f25-a85e-dbdcf74e33ae",
+      "name" : "POET-Validation-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/poet-combinations",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-PoetValidation",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_VALIDATION_INT/1.0/poetvalidation"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-PoetValidation-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-PoetValidation-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-PoetValidation-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['POET-Validation']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-PoetValidation",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "target.url",
+            "value" : "forward.target.url"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          }, {
+            "name" : "targetBasepath",
+            "value" : "/ic/api/integration/v1/flows/rest/SOCO_PA_POET_VALIDATION_INT/1.0/poetvalidation"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('TargetEndpoint')}{#context.getVariable('targetBasepath')}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-PoetValidation-Set-Headers",
+        "enabled" : true,
+        "policy" : "transform-headers",
+        "configuration" : {
+          "addHeaders" : [ {
+            "name" : "Authorization",
+            "value" : "{#request.headers['Authorization']}"
+          }, {
+            "name" : "Content-Type",
+            "value" : "application/json"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-PoetValidation-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-PoetValidation-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "b2bd10a2-9763-403a-8630-88a0ff7eea33",
+      "name" : "PTValidation-flow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "HTTP",
+        "path" : "/ptvalidate",
+        "pathOperator" : "EQUALS",
+        "methods" : [ "POST" ]
+      } ],
+      "request" : [ {
+        "name" : "AM-Set-Request-PTValidation",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "targetBasepath",
+            "value" : "ic/api/integration/v1/flows/rest/SOCO_PA_POET_PT_SEG_INT/2.0/projecttasks"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('target.url')}{#context.getVariable('targetBasepath')}"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-PTValidation-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-PTValidation-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "name" : "Routing Policy",
+        "enabled" : true,
+        "async" : false,
+        "policy" : "dynamic-routing",
+        "configuration" : {
+          "rules" : [ {
+            "pattern" : "/*",
+            "url" : "{#endpoints['PTValidation']}"
+          } ]
+        }
+      } ],
+      "response" : [ {
+        "name" : "AM-Set-Request-PTValidation",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "targetBasepath",
+            "value" : "ic/api/integration/v1/flows/rest/SOCO_PA_POET_PT_SEG_INT/2.0/projecttasks"
+          }, {
+            "name" : "target.url",
+            "value" : "{#context.getVariable('target.url')}{#context.getVariable('targetBasepath')}"
+          }, {
+            "name" : "target.copy.pathsuffix",
+            "value" : "false"
+          } ]
+        }
+      }, {
+        "name" : "AM-Set-Request-PTValidation-Set Verb",
+        "enabled" : true,
+        "policy" : "policy-override-request-method",
+        "configuration" : {
+          "method" : "POST"
+        }
+      }, {
+        "name" : "AM-Set-Request-PTValidation-Set-Payload",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "body" : "{#attributes['request.content']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      } ]
+    }, {
+      "id" : "13ae058f-1363-449f-8e96-237bfd0892d3",
+      "name" : "PostFlow",
+      "enabled" : true,
+      "selectors" : [ {
+        "type" : "CONDITION",
+        "condition" : "true"
+      } ],
+      "request" : [ ],
+      "response" : [ {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML']}"
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "((scope ~ \"Source*\" or scope ~ \"Target*\") and (contentType ~ \"*xml*\")) or (requestContentType ~ \"*xml*\")",
+        "name" : "XSLT-SuppressXML-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Content",
+        "enabled" : true,
+        "policy" : "policy-assign-content",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "type" : "application/xml",
+          "body" : "{#context.attributes['initialXML2']}"
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2",
+        "enabled" : true,
+        "policy" : "xslt",
+        "configuration" : {
+          "stylesheet" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"2.0\">  \r\n  <xsl:output indent=\"yes\" omit-xml-declaration=\"yes\"/>\r\n  <xsl:strip-space elements=\"*\"/>\r\n\r\n  <xsl:param name=\"SuppressionList\" select=\"''\"/>  \r\n\r\n  <xsl:template match=\"node()|@*\">\r\n    <xsl:copy>\r\n      <xsl:apply-templates select=\"node()|@*\"/>\r\n    </xsl:copy>\r\n  </xsl:template>\r\n \r\n\r\n  <xsl:template match=\"*[local-name()=tokenize($SuppressionList,'[\\|,; \\t]')]\"/>  \r\n</xsl:stylesheet>",
+          "parameters" : [ {
+            "name" : "SuppressionList",
+            "value" : "{#context.attributes['SuppressionList']}"
+          } ]
+        }
+      }, {
+        "condition" : "responseContentType ~ \"*xml*\"",
+        "name" : "XSLT-SuppressXML2-Assign-Attributes",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "attributes" : [ {
+            "name" : "revisedPayload",
+            "value" : "{#request.content}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-Biztalk-Auth-Key",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "ESBIZTALKIIS.BasicAuth",
+            "value" : "{#context.getVariable('ESBIZTALKIIS.Env')}.{#context.getVariable('ES')}.{#context.getVariable('AFTAPIGEE')}"
+          }, {
+            "name" : "Logging-SourceRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceRequest.Payload'))}"
+          }, {
+            "name" : "Logging-TargetResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetResponse.Payload'))}"
+          }, {
+            "name" : "Logging-TargetRequest.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('TargetRequest.Payload'))}"
+          }, {
+            "name" : "Logging-SourceResponse.Payload",
+            "value" : "{#escapeJSON(#context.getVariable('SourceResponse.Payload'))}"
+          } ]
+        }
+      }, {
+        "name" : "AM-Get-AllowOrigin-Key-ProxyLevel",
+        "enabled" : true,
+        "policy" : "policy-assign-attributes",
+        "configuration" : {
+          "scope" : "REQUEST",
+          "attributes" : [ {
+            "name" : "AllowOrigin.KVM.Key",
+            "value" : "{#context.getVariable('apiproxy.name')}"
+          } ]
+        }
+      } ]
+    } ]
+  } ],
+  "pages" : [ {
+    "id" : "9ed29fe8-fe1b-43ef-b6ba-638321802052",
+    "name" : "Homepage",
+    "type" : "SWAGGER",
+    "content" : "openapi: 3.0.0\ninfo:\n  title: My API\n  description: This is the introduction to the API.0\n  version: 1.0.0\nx-documentation:\n  pages:\n    - title: Rate Limiting\n      content:\n        Details about the rate limiting policy: 100 requests per minute.\npaths:\n  /example:\n    get:\n      summary: Example endpoint\n      responses:\n        '200':\n          description: Success",
+    "order" : 0,
+    "published" : false,
+    "visibility" : "PUBLIC",
+    "updatedAt" : "2025-04-07T17:34:31.261147500+02:00",
+    "contentType" : "text/yaml",
+    "homepage" : true,
+    "parentPath" : "/",
+    "excludedAccessControls" : false,
+    "accessControls" : [ ]
+  } ]
+}

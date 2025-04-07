@@ -1,0 +1,17 @@
+openapi: 3.0.0
+info:
+  title: My API
+  description: This is the introduction to the API.0
+  version: 1.0.0
+x-documentation:
+  pages:
+    - title: Rate Limiting
+      content:
+        Details about the rate limiting policy: 100 requests per minute.
+paths:
+  /example:
+    get:
+      summary: Example endpoint
+      responses:
+        '200':
+          description: Success
