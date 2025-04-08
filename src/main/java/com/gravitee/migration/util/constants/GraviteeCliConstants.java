@@ -56,6 +56,7 @@ public class GraviteeCliConstants {
         public static final String XML_TO_JSON = "XMLToJSON";
         public static final String JAVASCRIPT = "Javascript";
         public static final String XSLT = "XSL";
+        public static final String KVM = "KeyValueMapOperations";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
