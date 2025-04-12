@@ -11,28 +11,25 @@ import org.w3c.dom.Node;
 import javax.xml.xpath.XPath;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
-import static com.gravitee.migration.util.constants.GroovyConstants.MESSAGE_VALIDATION;
+import static com.gravitee.migration.util.constants.GroovyConstants.DECODE_JWT;
 
-/*
- * Converts MessageValidation policy from APIgee to Gravitee.
- * This class implements the PolicyConverter interface and provides the logic to convert the MessageValidation policy.
- */
 @Component
 @RequiredArgsConstructor
-public class MessageValidationConverter implements PolicyConverter {
+public class DecodeJWTConverter implements PolicyConverter {
 
     private final XPath xPath;
 
     @Override
     public boolean supports(String policyType) {
-        return GraviteeCliConstants.Policy.MESSAGE_VALIDATION.equals(policyType);
+        return GraviteeCliConstants.Policy.DECODE_JWT.equals(policyType);
     }
 
     @Override
     public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws Exception {
-        var policyName = xPath.evaluate("/MessageValidation/@name", apiGeePolicy);
-
+        var policyName = xPath.evaluate("/DecodeJWT/@name", apiGeePolicy);
         var scopeObject = createBaseScopeNode(stepNode, policyName, "groovy", scopeArray);
-        scopeObject.put("script", MESSAGE_VALIDATION);
+
+        var configurationObject = scopeObject.putObject("configuration");
+        configurationObject.put("script", DECODE_JWT);
     }
 }

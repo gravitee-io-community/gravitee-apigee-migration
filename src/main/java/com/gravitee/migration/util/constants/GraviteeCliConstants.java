@@ -62,6 +62,8 @@ public class GraviteeCliConstants {
         public static final String POPULATE_CACHE = "PopulateCache";
         public static final String VERIFY_API_KEY = "VerifyAPIKey";
         public static final String MESSAGE_VALIDATION = "MessageValidation";
+        public static final String VERIFY_JWT = "VerifyJWT";
+        public static final String DECODE_JWT = "DecodeJWT";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
