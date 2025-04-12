@@ -1,14 +1,16 @@
 package com.gravitee.migration.converter.object;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.util.DateUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-import java.util.List;
+import java.util.HashMap;
 import java.util.UUID;
 
 import static com.gravitee.migration.util.StringUtils.removeNewlines;
@@ -19,9 +21,12 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.
  * This class is responsible for mapping fields from the Apigee XML to the api object in the Gravitee JSON.
  */
 @Component
+@RequiredArgsConstructor
 public class ApiObjectConverter {
 
-    private final XPath xPath = XPathFactory.newInstance().newXPath();
+    private final ObjectMapper objectMapper;
+    private final XPath xPath;
+    private ArrayNode resourcesArray;
 
     /**
      * Creates the api object in the Gravitee JSON, with values mapped from Apigee XML.
@@ -30,7 +35,7 @@ public class ApiObjectConverter {
      * @param proxyXml       the document containing the proxy information located in proxies folder
      * @param graviteeConfig the root Gravitee JSON object
      */
-    public void mapApiObject(Document rootXml, Document proxyXml, ObjectNode graviteeConfig, List<Document> targetXml) throws XPathExpressionException {
+    public void mapApiObject(Document rootXml, Document proxyXml, ObjectNode graviteeConfig) throws XPathExpressionException {
         var apiNode = graviteeConfig.putObject(API_OBJECT);
         // Hardcoded values for Gravitee
         apiNode.put(DEFINITION_VERSION, V4);
@@ -57,7 +62,53 @@ public class ApiObjectConverter {
         apiNode.put(UPDATED_AT, DateUtils.convertMillisToIso8601(Long.parseLong(updatedAtMillis)));
 
         mapListeners(proxyXml, apiNode);
-        mapEndpointGroups(targetXml, apiNode);
+        mapEndpointGroups(apiNode);
+
+        resourcesArray = objectMapper.createArrayNode();
+        apiNode.set("resources", resourcesArray);
+    }
+
+    public void buildResources(Document apiGeePolicy) throws XPathExpressionException {
+        // Extract the name of the cache resource from the policy
+        var cacheName = xPath.evaluate("/*/CacheResource", apiGeePolicy);
+
+        // Check if an object with the same name already exists in the resources array
+        checkForExistingResource(cacheName);
+
+        // Create a new resource object if no match is found
+        var resourceObject = resourcesArray.addObject();
+        resourceObject.put(NAME, cacheName);
+        resourceObject.put(TYPE, "cache");
+        resourceObject.put(ENABLED, true);
+
+        // Create the configuration as a JSON string - default values(not present in Apigee)
+        var configurationMap = new HashMap<>();
+        configurationMap.put("timeToIdleSeconds", 0);
+        configurationMap.put("timeToLiveSeconds", 0);
+        configurationMap.put("maxEntriesLocalHeap", 1000);
+
+        String configurationJson;
+        try {
+            configurationJson = objectMapper.writeValueAsString(configurationMap);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert configuration to JSON", e);
+        }
+
+        resourceObject.put("configuration", configurationJson);
+    }
+
+    /**
+     * Checks if an object with the same name already exists in the resources array.
+     *
+     * @param resourceName the name of the resource
+     */
+    private void checkForExistingResource(String resourceName) {
+        for (var resourceNode : resourcesArray) {
+            if (resourceNode.has(NAME) && resourceName.equals(resourceNode.get(NAME).asText())) {
+                // Object with the same name already exists, skip creation
+                return;
+            }
+        }
     }
 
     /**
@@ -113,7 +164,7 @@ public class ApiObjectConverter {
         entrypointNode.putObject(CONFIGURATION);
     }
 
-    private void mapEndpointGroups(List<Document> targetXml, ObjectNode apiNode) throws XPathExpressionException {
+    private void mapEndpointGroups(ObjectNode apiNode) throws XPathExpressionException {
         var endpointGroupsArray = apiNode.putArray(ENDPOINT_GROUPS);
         var endpointGroupNode = endpointGroupsArray.addObject();
 
@@ -129,7 +180,7 @@ public class ApiObjectConverter {
         loadBalancerOptionsNode.put(TYPE, ROUND_ROBIN);
 
         constructEndpointGroupSharedConfiguration(endpointGroupNode);
-        constructEndpointGroupsEndpoints(endpointGroupNode, targetXml);
+        constructEndpointGroupsEndpoints(endpointGroupNode);
     }
 
     private void constructEndpointGroupSharedConfiguration(ObjectNode endpointGroupNode) {
@@ -137,34 +188,19 @@ public class ApiObjectConverter {
         configureSsl(sharedConfigurationNode);
     }
 
-    private void constructEndpointGroupsEndpoints(ObjectNode endpointGroupNode, List<Document> targetXml) throws XPathExpressionException {
+    private void constructEndpointGroupsEndpoints(ObjectNode endpointGroupNode) {
         var endpointsArray = endpointGroupNode.putArray(ENDPOINTS);
 
         // For each target endpoint in apiGee, create an endpoint in Gravitee
-        for (Document targetEndpointDocument : targetXml) {
             var endpointNode = endpointsArray.addObject();
-            endpointNode.put(NAME, xPath.evaluate("/TargetEndpoint/@name", targetEndpointDocument));
+            endpointNode.put(NAME, "Target Backend URL");
             endpointNode.put(TYPE, HTTP_PROXY);
             endpointNode.put(WEIGHT, 1);
             endpointNode.put(INHERIT_CONFIGURATION, true);
-
-            String endpointsUrl = constructEndpointsUrl(targetEndpointDocument);
-            endpointNode.putObject(CONFIGURATION).put(TARGET, endpointsUrl);
-
+            endpointNode.putObject(CONFIGURATION).put(TARGET, "https://changeMe");
             endpointNode.putObject(SERVICES);
             endpointNode.put(SECONDARY, false);
-        }
-    }
 
-    private String constructEndpointsUrl(Document targetEndpointDocument) throws XPathExpressionException {
-        // Extracted from the targetXml document <URL> tag located in the <HTTPTargetConnection> tag
-        String url = xPath.evaluate("/TargetEndpoint/HTTPTargetConnection/URL", targetEndpointDocument);
-
-        String protocol = url.substring(0, url.indexOf("//") + 2); // Extract the protocol part (e.g., "http://" or "https://")
-        String baseUrl = url.substring(protocol.length()); // Remove the protocol part
-        baseUrl = baseUrl.split("/")[0]; // Get the part before the first "/"
-
-        return protocol + "{#context.attributes['" + baseUrl + "']}" + url.substring(protocol.length() + baseUrl.length());
     }
 
     private void configureSsl(ObjectNode sharedConfigurationNode) {
