@@ -20,6 +20,10 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.NAME;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.ASSIGN_MESSAGE;
 
+/**
+ * Converts AssignMessage policy from APIgee to Gravitee.
+ * This class implements the PolicyConverter interface and provides the logic to convert the AssignMessage policy.
+ */
 @Component
 @RequiredArgsConstructor
 public class AssignMessageConverter implements PolicyConverter {
@@ -39,7 +43,7 @@ public class AssignMessageConverter implements PolicyConverter {
      * @throws XPathExpressionException If an error occurs while evaluating the XPath expression.
      */
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
         // Extracts the <AssignMessage> tag from the API Gee policy
         var name = xPath.evaluate("/AssignMessage/@name", apiGeePolicy);
         // Extracts the <AssignMessage> tag from the API Gee policy
@@ -136,11 +140,21 @@ public class AssignMessageConverter implements PolicyConverter {
                 headerValue = headerValue
                         .replace("{request.header.", "{#request.headers['")
                         .replace("}", "']}");
+            } else {
+                headerValue = replaceCurlyBraceAttributes(headerValue);
             }
 
             headerObject.put("name", headerName);
             headerObject.put("value", headerValue);
         }
+    }
+
+    private String replaceCurlyBraceAttributes(String value) {
+        if (value.contains("{") && value.contains("}")) {
+            String attributeKey = value.substring(value.indexOf("{") + 1, value.indexOf("}"));
+            return value.replace("{" + attributeKey + "}", "{#context.attributes['" + attributeKey + "']}");
+        }
+        return value;
     }
 
     private void configureRemovedHeaders(Document apiGeePolicy, ObjectNode configObject) throws XPathExpressionException {

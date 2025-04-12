@@ -14,6 +14,10 @@ import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.CONFIGURATION;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.JSON_TO_XML;
 
+/**
+ * Converts JSONToXML policy from APIgee to Gravitee.
+ * This class implements the PolicyConverter interface and provides the logic to convert the JSONToXML policy.
+ */
 @Component
 @RequiredArgsConstructor
 public class JsonToXmlConverter implements PolicyConverter {
@@ -26,7 +30,7 @@ public class JsonToXmlConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
         var name = xPath.evaluate("/JSONToXML/@name", apiGeePolicy);
 
         var phaseObjectNode = createBaseScopeNode(stepNode, name, "json-xml", scopeArray);

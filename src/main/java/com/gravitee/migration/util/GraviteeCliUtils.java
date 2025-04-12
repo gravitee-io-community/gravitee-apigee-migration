@@ -29,7 +29,8 @@ public class GraviteeCliUtils {
         }
         requestNode.put(NAME, policyName);
         //! TODO: SET FALSE FOR JAVASRIPT
-        requestNode.put(ENABLED, true);
+        boolean isEnabled = !policyType.equals("javascript");
+        requestNode.put(ENABLED, isEnabled);
         requestNode.put("policy", policyType);
 
         return requestNode;

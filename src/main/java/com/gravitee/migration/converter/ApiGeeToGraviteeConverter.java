@@ -13,6 +13,10 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Converts APIgee API to Gravitee API.
+ * This class is responsible for converting the API configuration from APIgee format to Gravitee format.
+ */
 @Component
 @RequiredArgsConstructor
 public class ApiGeeToGraviteeConverter {
@@ -28,7 +32,7 @@ public class ApiGeeToGraviteeConverter {
         var graviteeConfig = objectMapper.createObjectNode();
         var planName = xPath.evaluate("/APIProxy/@name", rootXml);
 
-        apiObjectConverter.mapApiObject(rootXml, proxyXml, graviteeConfig, targetEndpoints);
+        apiObjectConverter.mapApiObject(rootXml, proxyXml, graviteeConfig);
         planObjectConverter.createPlan(graviteeConfig, planName, apiGeePolicies, targetEndpoints, proxyXml);
         documentationObjectConverter.mapDocumentation(graviteeConfig);
 

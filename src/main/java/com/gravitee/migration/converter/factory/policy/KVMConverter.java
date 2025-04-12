@@ -15,6 +15,10 @@ import javax.xml.xpath.XPathExpressionException;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.KVM;
 
+/**
+ * Converts KVM policy from APIgee to Gravitee.
+ * This class implements the PolicyConverter interface and provides the logic to convert the KVM policy.
+ */
 @Component
 @RequiredArgsConstructor
 public class KVMConverter implements PolicyConverter {
@@ -27,7 +31,7 @@ public class KVMConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray) throws Exception {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws Exception {
         var mapIdentifier = xPath.evaluate("/KeyValueMapOperations/@mapIdentifier", apiGeePolicy);
         var policyName = xPath.evaluate("/KeyValueMapOperations/@name", apiGeePolicy);
         var phaseObjectNode = createBaseScopeNode(stepNode, policyName, "policy-assign-attributes", scopeArray);

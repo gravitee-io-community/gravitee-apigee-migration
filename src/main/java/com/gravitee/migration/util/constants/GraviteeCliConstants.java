@@ -42,6 +42,7 @@ public class GraviteeCliConstants {
         public static final String PATTERN = "pattern";
         public static final String SECURITY = "security";
         public static final String API_KEY = "API_KEY";
+        public static final String KEY_LESS = "KEY_LESS";
         public static final String STATUS = "status";
         public static final String VALIDATION = "validation";
     }
@@ -57,6 +58,9 @@ public class GraviteeCliConstants {
         public static final String JAVASCRIPT = "Javascript";
         public static final String XSLT = "XSL";
         public static final String KVM = "KeyValueMapOperations";
+        public static final String LOOKUP_CACHE = "LookupCache";
+        public static final String POPULATE_CACHE = "PopulateCache";
+        public static final String MESSAGE_VALIDATION = "MessageValidation";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -82,6 +86,9 @@ public class GraviteeCliConstants {
         public static final String ASYNC = "async";
         public static final String POLICY = "policy";
         public static final String URL = "url";
+        public static final String VALUE = "value";
+        public static final String PARAMETERS = "parameters";
+        public static final String ATTRIBUTES = "attributes";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -93,6 +100,6 @@ public class GraviteeCliConstants {
         public static final String SHARED_FLOWS = "sharedflows";
         public static final String RESOURCES = "resources";
         public static final String TARGETS = "targets";
-
+        public static final String XSLT = "xslt";
     }
 }

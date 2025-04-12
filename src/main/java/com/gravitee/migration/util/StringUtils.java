@@ -3,6 +3,8 @@ package com.gravitee.migration.util;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import javax.xml.XMLConstants;
 import javax.xml.transform.Transformer;
@@ -30,6 +32,13 @@ public class StringUtils {
         return input.replaceAll("\\r?\\n", "");
     }
 
+    /**
+     * Converts a Document object to a string representation.
+     *
+     * @param doc the Document object to convert
+     * @return the string representation of the Document
+     * @throws Exception if an error occurs during conversion
+     */
     public static String convertDocumentToString(Document doc) throws Exception {
         TransformerFactory tf = TransformerFactory.newInstance();
 
@@ -43,4 +52,65 @@ public class StringUtils {
         return writer.getBuffer().toString();
     }
 
+    /**
+     * Builds a key fragment string from the given NodeList of key fragments.
+     *
+     * @param keyFragments the NodeList of key fragments
+     * @return the constructed key fragment string
+     */
+    public static String buildKeyFragmentString(NodeList keyFragments) {
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < keyFragments.getLength(); i++) {
+            Node keyFragment = keyFragments.item(i);
+
+            if (hasRefAttribute(keyFragment)) {
+                appendRefValue(result, keyFragment);
+                break; // Stop processing further KeyFragments
+            } else {
+                appendTextContent(result, keyFragment);
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Constructs an endpoints URL by replacing the host part with a placeholder.
+     *
+     * @param url the original URL
+     * @return the transformed URL with a placeholder for the host
+     */
+    public static String constructEndpointsUrl(String url) {
+        // Extract the protocol part (e.g., "http://" or "https://")
+        String protocol = url.substring(0, url.indexOf("//") + 2);
+
+        // Extract the part between the protocol and the next "/"
+        String baseUrl = url.substring(protocol.length());
+        String host = baseUrl.split("/")[0]; // Get the host part
+
+        // Check if the host contains a placeholder or is already in lowercase
+        if (host.matches(".*\\{.*}.*") || host.equals(host.toLowerCase())) {
+            return url; // Return the URL as is
+        }
+
+        // Transform the URL
+        return protocol + "{#context.attributes['" + host + "']}" + url.substring(protocol.length() + host.length());
+    }
+
+    private static boolean hasRefAttribute(Node keyFragment) {
+        return keyFragment.getAttributes() != null && keyFragment.getAttributes().getNamedItem("ref") != null;
+    }
+
+    private static void appendRefValue(StringBuilder result, Node keyFragment) {
+        String refValue = keyFragment.getAttributes().getNamedItem("ref").getNodeValue();
+        result.append(":{#context.attributes['").append(refValue).append("']}");
+    }
+
+    private static void appendTextContent(StringBuilder result, Node keyFragment) {
+        if (!result.isEmpty()) {
+            result.append(":");
+        }
+        result.append(keyFragment.getTextContent());
+    }
 }

@@ -18,6 +18,10 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.EXTRACT_VARIABLES;
 import static java.util.Objects.nonNull;
 
+/**
+ * Converts ExtractVariables policy from APIgee to Gravitee.
+ * This class implements the PolicyConverter interface and provides the logic to convert the ExtractVariables policy.
+ */
 @Component
 @RequiredArgsConstructor
 public class ExtractVariablesConverter implements PolicyConverter {
@@ -30,8 +34,7 @@ public class ExtractVariablesConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode requestArray) throws XPathExpressionException {
-        // TODO: SPLIT INTO MULTIPLE METHODS AND SEE OTHER EXAMPLE IF IT IS NOT JSONPayload
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode requestArray, String phase) throws XPathExpressionException {
         var jsonPayloadVariables = (NodeList) xPath.evaluate("/ExtractVariables/JSONPayload/Variable", apiGeePolicy, XPathConstants.NODESET);
 
         if (jsonPayloadVariables != null && jsonPayloadVariables.getLength() > 0) {

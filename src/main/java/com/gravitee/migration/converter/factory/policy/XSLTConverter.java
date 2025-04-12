@@ -21,8 +21,14 @@ import java.nio.file.Paths;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.StringUtils.convertDocumentToString;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.XSLT;
 
+/**
+ * This class is responsible for converting XSLT policies from Apigee to Gravitee format.
+ * It implements the PolicyConverter interface and provides methods to convert XSLT policies.
+ */
 @Component
 @RequiredArgsConstructor
 public class XSLTConverter implements PolicyConverter {
@@ -36,13 +42,12 @@ public class XSLTConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray) throws Exception {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
         var policyName = xPath.evaluate("/XSL/@name", apiGeePolicy);
         var xslDocument = extractCorrespondingDocument(apiGeePolicy);
 
         // construct policies
-        createChangeContentPolicy(stepNode, policyName, apiGeePolicy, scopeArray);
-        createConfigurationForXslt(stepNode, policyName, xslDocument, apiGeePolicy, scopeArray);
+        createConfigurationForXslt(stepNode, policyName, xslDocument, apiGeePolicy, scopeArray, scope);
         crateAssignAttributesPolicy(stepNode, policyName, apiGeePolicy, scopeArray);
     }
 
@@ -52,12 +57,11 @@ public class XSLTConverter implements PolicyConverter {
         // Get the first child folder of the current folder(apiproxy or sharedflowbundle)
         Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
         // Get the resources path
-        String resourcesPath = Paths.get(childFolder.toString(), "resources").toString();
-
+        String resourcesPath = Paths.get(childFolder.toString(), RESOURCES).toString();
         // Extract the resource URL from the policy
         var resourceUrl = xPath.evaluate("/XSL/ResourceURL", apiGeePolicy);
 
-        // Extract the folder name and file name from the resource URL
+        // Extract the folder name and file name from the resource URL (ex. xsl://XSLT-SuppressXML.xslt)
         var folderName = resourceUrl.substring(0, resourceUrl.indexOf(':'));
         var fileName = resourceUrl.substring(resourceUrl.indexOf("//") + 2);
 
@@ -67,20 +71,25 @@ public class XSLTConverter implements PolicyConverter {
         return fileReaderService.findDocumentByName(sharedFlowResources, fileName);
     }
 
-    private void createConfigurationForXslt(Node stepNode, String fileName, Document xsltDocument, Document apiGeePolicy, ArrayNode scopeArray) throws Exception {
-        var objectNode = createBaseScopeNode(stepNode, fileName, "xslt", scopeArray);
-        var configurationObject = objectNode.putObject("configuration");
-
+    private void createConfigurationForXslt(Node stepNode, String fileName, Document xsltDocument, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
+        // Create the base scope node for the XSLT policy
+        var scopeObjectNode = createBaseScopeNode(stepNode, fileName, "xslt", scopeArray);
+        // Create the configuration object for the XSLT policy
+        var configurationObject = scopeObjectNode.putObject(CONFIGURATION);
+        configurationObject.put("scope", scope.toUpperCase());
+        // Set the stylesheet for the XSLT policy
         configurationObject.put("stylesheet", convertDocumentToString(xsltDocument));
-
+        // Set parameters for the XSLT policy
         createXslParameters(configurationObject, apiGeePolicy);
     }
 
     private void createXslParameters(ObjectNode policyObjectNode, Document apiGeePolicy) throws XPathExpressionException {
+        // Extract the parameters from the APIgee policy
         NodeList parameterValues = (NodeList) xPath.evaluate("/XSL/Parameters/Parameter", apiGeePolicy, XPathConstants.NODESET);
 
+        // Only create the parameters array if there are parameters present
         if (parameterValues.getLength() > 0) {
-            var parameters = policyObjectNode.putArray("parameters");
+            var parameters = policyObjectNode.putArray(PARAMETERS);
 
             for (int i = 0; i < parameterValues.getLength(); i++) {
                 var parameter = parameterValues.item(i);
@@ -89,22 +98,11 @@ public class XSLTConverter implements PolicyConverter {
 
                 if (!name.isEmpty() && !value.isEmpty()) {
                     var parameterObject = parameters.addObject();
-                    parameterObject.put("name", name);
-                    parameterObject.put("value", "{#context.attributes['" + value + "']}");
+                    parameterObject.put(NAME, name);
+                    parameterObject.put(VALUE, value);
                 }
             }
         }
-    }
-
-    private void createChangeContentPolicy(Node stepNode, String fileName, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
-        var source = xPath.evaluate("/XSL/Source", apiGeePolicy);
-        var objectNode = createBaseScopeNode(stepNode, fileName.concat("-Assign-Content"), "policy-assign-content", scopeArray);
-
-        var configurationObject = objectNode.putObject("configuration");
-        configurationObject.put("scope", "REQUEST");
-        configurationObject.put("type", "application/xml");
-        configurationObject.put("body", "{#context.attributes['" + source + "']}");
-
     }
 
     private void crateAssignAttributesPolicy(Node stepNode, String fileName, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
@@ -113,11 +111,11 @@ public class XSLTConverter implements PolicyConverter {
         if (!outputVariable.isEmpty()) {
             var objectNode = createBaseScopeNode(stepNode, fileName.concat("-Assign-Attributes"), "policy-assign-attributes", scopeArray);
 
-            var configurationObject = objectNode.putObject("configuration");
-            var attributesArray = configurationObject.putArray("attributes");
+            var configurationObject = objectNode.putObject(CONFIGURATION);
+            var attributesArray = configurationObject.putArray(ATTRIBUTES);
             var attributeObject = attributesArray.addObject();
-            attributeObject.put("name", outputVariable);
-            attributeObject.put("value", "{#request.content}");
+            attributeObject.put(NAME, outputVariable);
+            attributeObject.put(VALUE, "{#request.content}");
         }
     }
 }

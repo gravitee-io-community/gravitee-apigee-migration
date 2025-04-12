@@ -16,6 +16,10 @@ import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.CONFIGURATION;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.SPIKE_ARREST;
 
+/**
+ * Converts the SpikeArrest policy from APIgee to Gravitee format.
+ * The SpikeArrest policy is used to limit the rate of requests to an API.
+ */
 @Component
 @RequiredArgsConstructor
 public class SpikeArrestMapper implements PolicyConverter {
@@ -28,7 +32,7 @@ public class SpikeArrestMapper implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
         var name = xPath.evaluate("/SpikeArrest/@name", apiGeePolicy);
         var scopeNode = createBaseScopeNode(stepNode, name, "spike-arrest", scopeArray);
 

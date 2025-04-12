@@ -19,6 +19,11 @@ import java.util.List;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.FLOW_CALLOUT;
 
+
+/**
+ * Converts FlowCallout policy from APIgee to Gravitee.
+ * This class implements the PolicyConverter interface and provides the logic to convert the FlowCallout policy.
+ */
 @Component
 @Slf4j
 public class FlowCalloutConverter implements PolicyConverter {
@@ -42,34 +47,32 @@ public class FlowCalloutConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
         var sharedFlowBundleNode = (Node) xPath.evaluate("/FlowCallout/SharedFlowBundle", apiGeePolicy, XPathConstants.NODE);
         var sharedFlowBundleFolderName = sharedFlowBundleNode != null ? sharedFlowBundleNode.getTextContent() : null;
 
-        extractSharedFlowDocuments(sharedFlowBundleFolderName, scopeArray);
+        extractSharedFlowDocuments(sharedFlowBundleFolderName, scopeArray, phase);
     }
 
-    private void extractSharedFlowDocuments(String sharedFlowBundleFolderName, ArrayNode scopeArray) {
+    private void extractSharedFlowDocuments(String sharedFlowBundleFolderName, ArrayNode scopeArray, String scope) {
         if (sharedFlowBundleFolderName != null && !sharedFlowBundleFolderName.isEmpty()) {
             try {
                 var sharedFlowFolder = fileReaderService.findFolderStartingWith(sharedFlowBundleFolderName).getAbsolutePath();
 
                 var sharedFlowPolicies = fileReaderService.parseXmlFiles(sharedFlowFolder, SHARED_FLOW_BUNDLE + "/" + POLICIES);
-                var sharedFlowResources = fileReaderService.parseXmlFiles(sharedFlowFolder, SHARED_FLOW_BUNDLE + "/" + RESOURCES);
                 var sharedFlow = fileReaderService.parseXmlFiles(sharedFlowFolder, SHARED_FLOW_BUNDLE + "/" + SHARED_FLOWS).getFirst();
 
-                processSharedFlowBundleSteps(sharedFlow, scopeArray, sharedFlowPolicies);
+                processSharedFlowBundleSteps(sharedFlow, scopeArray, sharedFlowPolicies, scope);
                 fileReaderService.setCurrentFolderToInitialState();
             } catch (Exception e) {
-                log.error("folder not present");
-                // TODO: ASK HOW TO INFORM CLIENT IN CASE A FOLDER DOES NO EXIST
+                log.warn("SharedFlow folder not found: {}", sharedFlowBundleFolderName);
             }
         }
     }
 
-    private void processSharedFlowBundleSteps(Document sharedFlow, ArrayNode requestArray, List<Document> sharedFlowPolicies) throws XPathExpressionException {
+    private void processSharedFlowBundleSteps(Document sharedFlow, ArrayNode requestArray, List<Document> sharedFlowPolicies, String scope) throws XPathExpressionException {
         var steps = (NodeList) xPath.evaluate("/SharedFlow/Step", sharedFlow, XPathConstants.NODESET);
 
-        planObjectConverter.applyPoliciesToFlowNodes(steps, sharedFlowPolicies, requestArray);
+        planObjectConverter.applyPoliciesToFlowNodes(steps, sharedFlowPolicies, requestArray, scope);
     }
 }
