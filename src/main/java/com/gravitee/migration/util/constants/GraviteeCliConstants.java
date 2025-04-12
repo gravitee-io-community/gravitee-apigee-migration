@@ -64,6 +64,7 @@ public class GraviteeCliConstants {
         public static final String MESSAGE_VALIDATION = "MessageValidation";
         public static final String VERIFY_JWT = "VerifyJWT";
         public static final String DECODE_JWT = "DecodeJWT";
+        public static final String SERVICE_CALLOUT = "ServiceCallout";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
