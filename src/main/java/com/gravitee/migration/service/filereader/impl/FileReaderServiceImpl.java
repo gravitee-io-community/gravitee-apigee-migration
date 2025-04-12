@@ -11,9 +11,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.API_PROXY;
 
@@ -59,8 +57,25 @@ public class FileReaderServiceImpl implements FileReaderService {
     }
 
     @Override
+    public Map<String, String> parseJavaScriptFiles(String folderLocation, String folderName) throws IOException {
+        File jsFilesFolder = getFolder(folderLocation, folderName);
+        File[] jsFiles = listJavaScriptFiles(jsFilesFolder);
+        Map<String, String> jsFileContents = new HashMap<>();
+
+        if (jsFiles != null) {
+            for (File jsFile : jsFiles) {
+                String fileName = jsFile.getName();
+                String fileContent = new String(java.nio.file.Files.readAllBytes(jsFile.toPath()));
+                jsFileContents.put(fileName, fileContent);
+            }
+        }
+        return jsFileContents;
+    }
+
+    @Override
     public File findFolderStartingWith(String folderNamePrefix) {
-        File parentDir = new File(inputFolderLocation);
+        String fileInput = inputFolderLocation + "/SharedFlows";
+        File parentDir = new File(fileInput);
         File[] matchingFolders = parentDir.listFiles((dir, name) -> name.startsWith(folderNamePrefix));
         if (matchingFolders == null || matchingFolders.length == 0) {
             throw new IllegalArgumentException("No folder found starting with: " + folderNamePrefix);
@@ -68,7 +83,6 @@ public class FileReaderServiceImpl implements FileReaderService {
         currentFolder = matchingFolders[0].getAbsolutePath();
         return matchingFolders[0];
     }
-
 
     @Override
     public void setCurrentFolderToInitialState() {
@@ -100,7 +114,6 @@ public class FileReaderServiceImpl implements FileReaderService {
         }
     }
 
-
     /**
      * Creates file object for the specified folder location and folder name, if folder name is null it keeps the root folder.
      *
@@ -124,7 +137,7 @@ public class FileReaderServiceImpl implements FileReaderService {
      */
     private File[] listXmlFiles(File folder) {
         return folder.listFiles((dir, name) ->
-                name.endsWith(".xml") || name.endsWith(".xsl") || name.endsWith(".xslt") || name.endsWith(".js")
+                name.endsWith(".xml") || name.endsWith(".xsl") || name.endsWith(".xslt")
         );
     }
 
@@ -161,5 +174,15 @@ public class FileReaderServiceImpl implements FileReaderService {
         factory.setFeature("http://javax.xml.XMLConstants/feature/secure-processing", true);
 
         return factory.newDocumentBuilder();
+    }
+
+    /**
+     * Lists all JavaScript files in the specified folder.
+     *
+     * @param folder The folder to search for JavaScript files.
+     * @return An array of JavaScript files found in the folder.
+     */
+    private File[] listJavaScriptFiles(File folder) {
+        return folder.listFiles((dir, name) -> name.endsWith(".js"));
     }
 }
