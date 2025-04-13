@@ -10,8 +10,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.ENABLED;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.NAME;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.SCRIPT;
 import static java.util.Objects.nonNull;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -36,6 +36,15 @@ public class GraviteeCliUtils {
         return requestNode;
     }
 
+    public static void createGroovyConfiguration(String script, String scope, ObjectNode scopeObject) {
+        var configurationObject = scopeObject.putObject(CONFIGURATION);
+        configurationObject.put(SCOPE, scope.toUpperCase());
+        configurationObject.put(READ_CONTENT, true);
+
+        var generatedScript = generateGroovyScript(script, scope);
+        configurationObject.put(SCRIPT, generatedScript);
+    }
+
     public static String convertApigeePolicyConditionToGravitee(String apigeeCondition) {
         if (apigeeCondition == null || apigeeCondition.trim().isEmpty()) {
             return null; // Return null if the condition is null or empty
@@ -48,5 +57,9 @@ public class GraviteeCliUtils {
                 .replace("proxy.pathsuffix MatchesPath", "#request.path.matches")  // Positive match
                 .replaceAll("(#request\\.path\\.matches)\\s+\"([^\"]+)\"", "$1(\"$2\")") // Ensure parentheses are added correctly
                 .replace("request.verb", "#request.method"); // Handle verb to method conversion
+    }
+
+    private static String generateGroovyScript(String script, String scope) {
+        return String.format(script, scope);
     }
 }

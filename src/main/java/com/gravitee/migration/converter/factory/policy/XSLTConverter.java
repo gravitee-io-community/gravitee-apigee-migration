@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.service.filereader.FileReaderService;
+import com.gravitee.migration.util.constants.GraviteeCliConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -23,6 +24,7 @@ import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.StringUtils.convertDocumentToString;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.STYLESHEET;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.XSLT;
 
 /**
@@ -46,9 +48,7 @@ public class XSLTConverter implements PolicyConverter {
         var policyName = xPath.evaluate("/XSL/@name", apiGeePolicy);
         var xslDocument = extractCorrespondingDocument(apiGeePolicy);
 
-        // construct policies
         createConfigurationForXslt(stepNode, policyName, xslDocument, apiGeePolicy, scopeArray, scope);
-        crateAssignAttributesPolicy(stepNode, policyName, apiGeePolicy, scopeArray);
     }
 
     private Document extractCorrespondingDocument(Document apiGeePolicy) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
@@ -73,12 +73,12 @@ public class XSLTConverter implements PolicyConverter {
 
     private void createConfigurationForXslt(Node stepNode, String fileName, Document xsltDocument, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
         // Create the base scope node for the XSLT policy
-        var scopeObjectNode = createBaseScopeNode(stepNode, fileName, "xslt", scopeArray);
+        var scopeObjectNode = createBaseScopeNode(stepNode, fileName, GraviteeCliConstants.PolicyType.XSLT, scopeArray);
         // Create the configuration object for the XSLT policy
         var configurationObject = scopeObjectNode.putObject(CONFIGURATION);
-        configurationObject.put("scope", scope.toUpperCase());
+        configurationObject.put(SCOPE, scope.toUpperCase());
         // Set the stylesheet for the XSLT policy
-        configurationObject.put("stylesheet", convertDocumentToString(xsltDocument));
+        configurationObject.put(STYLESHEET, convertDocumentToString(xsltDocument));
         // Set parameters for the XSLT policy
         createXslParameters(configurationObject, apiGeePolicy);
     }
@@ -93,29 +93,19 @@ public class XSLTConverter implements PolicyConverter {
 
             for (int i = 0; i < parameterValues.getLength(); i++) {
                 var parameter = parameterValues.item(i);
-                var name = xPath.evaluate("@name", parameter);
-                var value = xPath.evaluate("@ref", parameter);
-
-                if (!name.isEmpty() && !value.isEmpty()) {
-                    var parameterObject = parameters.addObject();
-                    parameterObject.put(NAME, name);
-                    parameterObject.put(VALUE, value);
-                }
+                addParameterToArray(parameters, parameter);
             }
         }
     }
 
-    private void crateAssignAttributesPolicy(Node stepNode, String fileName, Document apiGeePolicy, ArrayNode scopeArray) throws XPathExpressionException {
-        var outputVariable = xPath.evaluate("/XSL/OutputVariable", apiGeePolicy);
+    private void addParameterToArray(ArrayNode parameters, Node parameter) throws XPathExpressionException {
+        var name = xPath.evaluate("@name", parameter);
+        var value = xPath.evaluate("@ref", parameter);
 
-        if (!outputVariable.isEmpty()) {
-            var objectNode = createBaseScopeNode(stepNode, fileName.concat("-Assign-Attributes"), "policy-assign-attributes", scopeArray);
-
-            var configurationObject = objectNode.putObject(CONFIGURATION);
-            var attributesArray = configurationObject.putArray(ATTRIBUTES);
-            var attributeObject = attributesArray.addObject();
-            attributeObject.put(NAME, outputVariable);
-            attributeObject.put(VALUE, "{#request.content}");
+        if (!name.isEmpty() && !value.isEmpty()) {
+            var parameterObject = parameters.addObject();
+            parameterObject.put(NAME, name);
+            parameterObject.put(VALUE, value);
         }
     }
 }

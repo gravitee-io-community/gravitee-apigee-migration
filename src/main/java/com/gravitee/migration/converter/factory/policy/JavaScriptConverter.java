@@ -3,6 +3,7 @@ package com.gravitee.migration.converter.factory.policy;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.service.filereader.FileReaderService;
+import com.gravitee.migration.util.constants.GraviteeCliConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -15,6 +16,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.CONFIGURATION;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.REQUEST;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.JAVASCRIPT;
 
 /**
@@ -38,7 +42,18 @@ public class JavaScriptConverter implements PolicyConverter {
         var policyName = xPath.evaluate("/Javascript/@name", apiGeePolicy);
         var document = extractJavaScriptContent(apiGeePolicy);
 
-        createConfigurationForJavascript(stepNode, policyName, document, scopeArray);
+        createConfigurationForJavascript(stepNode, policyName, document, scopeArray, phase);
+    }
+
+    private void createConfigurationForJavascript(Node stepNode, String fileName, String javaScriptContent, ArrayNode scopeArray, String phase) throws XPathExpressionException {
+        var objectNode = createBaseScopeNode(stepNode, fileName, GraviteeCliConstants.PolicyType.JAVASCRIPT, scopeArray);
+        var configurationObject = objectNode.putObject(CONFIGURATION);
+
+        if (phase.equalsIgnoreCase(REQUEST)) {
+            configurationObject.put("onRequestScript", javaScriptContent);
+        } else {
+            configurationObject.put("onResponseScript", javaScriptContent);
+        }
     }
 
     private String extractJavaScriptContent(Document apiGeePolicy) throws XPathExpressionException, IOException {
@@ -50,10 +65,10 @@ public class JavaScriptConverter implements PolicyConverter {
         return getJavaScriptContent(resourcesPath, folderName, fileName);
     }
 
-    private String resolveResourcesPath()  {
+    private String resolveResourcesPath() {
         String currentFolder = fileReaderService.getCurrentFolder();
         Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
-        return Paths.get(childFolder.toString(), "resources").toString();
+        return Paths.get(childFolder.toString(), RESOURCES).toString();
     }
 
     private String getJavaScriptContent(String resourcesPath, String folderName, String fileName) throws IOException {
@@ -64,12 +79,5 @@ public class JavaScriptConverter implements PolicyConverter {
             throw new IllegalArgumentException("No matching JavaScript file found for: " + fileName);
         }
         return jsContent;
-    }
-
-    private void createConfigurationForJavascript(Node stepNode, String fileName, String javaScriptContent, ArrayNode scopeArray) throws Exception {
-        var objectNode = createBaseScopeNode(stepNode, fileName, "javascript", scopeArray);
-        var configurationObject = objectNode.putObject("configuration");
-
-        configurationObject.put("onRequestScript", javaScriptContent);
     }
 }

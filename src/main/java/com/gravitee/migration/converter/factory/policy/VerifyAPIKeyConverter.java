@@ -8,9 +8,14 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpressionException;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.VERIFY_API_KEY;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.API_KEY;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.TRANSFORM_HEADERS;
 
 @Component
 @RequiredArgsConstructor
@@ -28,19 +33,26 @@ public class VerifyAPIKeyConverter implements PolicyConverter {
         var policyName = xPath.evaluate("/VerifyAPIKey/@name", apiGeePolicy);
         var apiKeyRef = xPath.evaluate("/VerifyAPIKey/APIKey/@ref", apiGeePolicy);
 
-        // First we add the transform-header policy to add the extracted apikey to the X-Gravitee-Api-Key header
-        var scopeObjectHeaders = createBaseScopeNode(stepNode, policyName, "transform-headers", scopeArray);
-        var configurationObjectHeaders = scopeObjectHeaders.putObject("configuration");
-        configurationObjectHeaders.put("scope", scope.toUpperCase());
-        var configurationsArray =  configurationObjectHeaders.putArray("addHeaders");
+        addTransformHeadersPolicy(stepNode, scopeArray, scope, policyName, apiKeyRef);
+        addApiKeyPolicy(stepNode, scopeArray, policyName);
+    }
+
+    private void addTransformHeadersPolicy(Node stepNode, ArrayNode scopeArray, String scope, String policyName, String apiKeyRef) throws XPathExpressionException {
+        var scopeObjectHeaders = createBaseScopeNode(stepNode, policyName, TRANSFORM_HEADERS, scopeArray);
+        var configurationObjectHeaders = scopeObjectHeaders.putObject(CONFIGURATION);
+        configurationObjectHeaders.put(SCOPE, scope.toUpperCase());
+
+        var configurationsArray = configurationObjectHeaders.putArray(ADD_HEADERS);
         var configurationObject = configurationsArray.addObject();
-        configurationObject.put("name", "X-Gravitee-Api-Key");
-        configurationObject.put("value", "{#context.attributes['" + apiKeyRef + "']}");
+        configurationObject.put(NAME, X_GRAVITEE_API_KEY);
+        configurationObject.put(VALUE, "{#context.attributes['" + apiKeyRef + "']}");
+    }
 
-        var scopeObject = createBaseScopeNode(stepNode, policyName, "api-key", scopeArray);
-
-        var configurationObject2 = scopeObject.putObject("configuration");
-        configurationObject2.put("propagateApiKey", false);
-
+    private void addApiKeyPolicy(Node stepNode, ArrayNode scopeArray, String policyName) throws XPathExpressionException {
+        var scopeObject = createBaseScopeNode(stepNode, policyName, API_KEY, scopeArray);
+        var configurationObject = scopeObject.putObject(CONFIGURATION);
+        configurationObject.put(PROPAGATE_API_KEY, false);
     }
 }
+
+

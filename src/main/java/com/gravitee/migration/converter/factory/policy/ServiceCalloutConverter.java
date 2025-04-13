@@ -15,11 +15,14 @@ import javax.xml.xpath.XPathExpressionException;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.StringUtils.constructEndpointsUrl;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.SERVICE_CALLOUT;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.HTTP_CALLOUT;
 
-/*
+/**
  * Converts ServiceCallout policy from APIgee to Gravitee.
- * This class implements the PolicyConverter interface and provides the logic to convert the ServiceCallout policy.
+ * Implements the PolicyConverter interface and provides the logic to convert the ServiceCallout policy.
  */
 @Component
 @RequiredArgsConstructor
@@ -42,52 +45,35 @@ public class ServiceCalloutConverter implements PolicyConverter {
         var path = xPath.evaluate("/ServiceCallout/Request/Set/Path", apiGeePolicy);
         var url = xPath.evaluate("/ServiceCallout/HTTPTargetConnection/URL", apiGeePolicy);
 
-        var scopeObjectNode = createBaseScopeNode(stepNode, policyName, "policy-http-callout", scopeArray);
-        var configurationObjectNode = scopeObjectNode.putObject("configuration");
 
-        configureRequest(configurationObjectNode, method, url, path);
+        var scopeObjectNode = createBaseScopeNode(stepNode, policyName, HTTP_CALLOUT, scopeArray);
+        var configurationObjectNode = scopeObjectNode.putObject(CONFIGURATION);
+
+        configureRequest(configurationObjectNode, method, url, path, formParametersNodeList);
         processHeaders(headersNodeList, configurationObjectNode.putArray("headers"));
-        processFormParameters(formParametersNodeList, scopeObjectNode);
-
         configureResponseHandling(scopeObjectNode, apiGeePolicy);
     }
 
-    private void configureRequest(ObjectNode configurationObjectNode, String method, String url, String path) {
+    private void configureRequest(ObjectNode configurationObjectNode, String method, String url, String path, NodeList formParametersNodeList) throws XPathExpressionException {
         path = validatePath(path);
-
         var fullUrl = url + path;
+        var formParams = buildFormParameters(formParametersNodeList);
 
-        configurationObjectNode.put("method", (method != null && !method.isEmpty()) ? method : "GET");
-        configurationObjectNode.put("url", constructEndpointsUrl(fullUrl));
-    }
-
-    private String validatePath(String path) {
-        if (path != null && !path.startsWith(PATH_DELIMITER)) {
-            path = PATH_DELIMITER + path;
+        if (!formParams.isEmpty()) {
+            fullUrl += "?" + formParams;
         }
-        return path;
+
+        configurationObjectNode.put(METHOD, (method != null && !method.isEmpty()) ? method : "GET");
+        configurationObjectNode.put(URL, constructEndpointsUrl(fullUrl));
     }
 
-    private void processHeaders(NodeList headersNodeList, ArrayNode headersArray) throws XPathExpressionException {
-        for (int i = 0; i < headersNodeList.getLength(); i++) {
-            var headerNode = headersNodeList.item(i);
-            var headerName = xPath.evaluate("@name", headerNode);
-            var headerValue = xPath.evaluate("text()", headerNode);
-
-            headerValue = replaceCurlyBraceAttributes(headerValue);
-            headersArray.addObject().put("name", headerName).put("value", headerValue);
-        }
-    }
-
-    private void processFormParameters(NodeList formParametersNodeList, ObjectNode scopeObjectNode) throws XPathExpressionException {
+    private String buildFormParameters(NodeList formParametersNodeList) throws XPathExpressionException {
         var formParams = new StringBuilder();
 
         for (int i = 0; i < formParametersNodeList.getLength(); i++) {
             var formParamNode = formParametersNodeList.item(i);
             var paramName = xPath.evaluate("@name", formParamNode);
-            var paramValue = xPath.evaluate("text()", formParamNode);
-
-            paramValue = replaceCurlyBraceAttributes(paramValue);
+            var paramValue = replaceCurlyBraceAttributes(xPath.evaluate("text()", formParamNode));
 
             if (!formParams.isEmpty()) {
                 formParams.append("&");
@@ -95,25 +81,42 @@ public class ServiceCalloutConverter implements PolicyConverter {
             formParams.append(paramName).append("=").append(paramValue);
         }
 
-        scopeObjectNode.put("body", formParams.toString());
+        return formParams.toString();
+    }
+
+    private void processHeaders(NodeList headersNodeList, ArrayNode headersArray) throws XPathExpressionException {
+        for (int i = 0; i < headersNodeList.getLength(); i++) {
+            var headerNode = headersNodeList.item(i);
+            var headerName = xPath.evaluate("@name", headerNode);
+            var headerValue = replaceCurlyBraceAttributes(xPath.evaluate("text()", headerNode));
+
+            headersArray.addObject().put(NAME, headerName).put(VALUE, headerValue);
+        }
     }
 
     private void configureResponseHandling(ObjectNode scopeObjectNode, Document apiGeePolicy) throws XPathExpressionException {
-        var variablesArray = scopeObjectNode.putArray("variables");
+        var variablesArray = scopeObjectNode.putArray(VARIABLES);
         var responseName = xPath.evaluate("/ServiceCallout/Response", apiGeePolicy);
 
         if (responseName != null && !responseName.isEmpty()) {
             var variablesObject = variablesArray.addObject();
-            variablesObject.put("name", responseName);
-            variablesObject.put("value", "{#calloutResponse.content}");
-            scopeObjectNode.put("fireAndForget", false);
+            variablesObject.put(NAME, responseName);
+            variablesObject.put(VALUE, "{#calloutResponse.content}");
+            scopeObjectNode.put(FIRE_AND_FORGET, false);
         } else {
-            scopeObjectNode.put("fireAndForget", true);
+            scopeObjectNode.put(FIRE_AND_FORGET, true);
         }
 
-        scopeObjectNode.put("exitOnError", true);
-        scopeObjectNode.put("errorCondition", "{#calloutResponse.status >= 400 and #calloutResponse.status <= 599}");
-        scopeObjectNode.put("errorStatusCode", 500);
+        scopeObjectNode.put(EXIT_ON_ERROR, true);
+        scopeObjectNode.put(ERROR_CONDITION, "{#calloutResponse.status >= 400 and #calloutResponse.status <= 599}");
+        scopeObjectNode.put(ERROR_STATUS_CODE, 500);
+    }
+
+    private String validatePath(String path) {
+        if (path != null && !path.startsWith(PATH_DELIMITER)) {
+            path = PATH_DELIMITER + path;
+        }
+        return path;
     }
 
     private String replaceCurlyBraceAttributes(String value) {

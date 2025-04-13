@@ -10,6 +10,10 @@ import org.w3c.dom.Node;
 import javax.xml.xpath.XPath;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.RAISE_FAULT;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
+import static com.gravitee.migration.util.constants.GroovyConstants.RAISE_FAULT_GROOVY;
 
 /**
  * This class is responsible for converting the RaiseFault policy from the old format to the new format.
@@ -22,40 +26,29 @@ public class RaiseFaultConverter implements PolicyConverter {
 
     @Override
     public boolean supports(String policyType) {
-        return "RaiseFault".equals(policyType);
+        return RAISE_FAULT.equals(policyType);
     }
 
     @Override
     public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws Exception {
         var policyName = xPath.evaluate("/RaiseFault/@name", apiGeePolicy);
-        var scopeObject = createBaseScopeNode(stepNode, policyName, "groovy", scopeArray);
+        var scopeObject = createBaseScopeNode(stepNode, policyName, GROOVY, scopeArray);
         var status = xPath.evaluate("/RaiseFault/FaultResponse/Set/StatusCode", apiGeePolicy);
         var payloadHeader = xPath.evaluate("/RaiseFault/FaultResponse/Set/Payload/@contentType", apiGeePolicy);
         var payload = xPath.evaluate("/RaiseFault/FaultResponse/Set/Payload/text()", apiGeePolicy);
 
-        var configurationObject = scopeObject.putObject("configuration");
-        configurationObject.put("scope", "REQUEST");
-        configurationObject.put("script", constructGroovyPolicy(status, payloadHeader, payload));
+        var configurationObject = scopeObject.putObject(CONFIGURATION);
+        configurationObject.put(SCOPE, phase.toUpperCase());
+        configurationObject.put(SCRIPT, constructGroovyPolicy(status, payloadHeader, payload));
     }
 
     private String constructGroovyPolicy(String status, String payloadHeader, String payload) {
-        StringBuilder script = new StringBuilder();
-
-        script.append("import io.gravitee.policy.groovy.PolicyResult.State\n");
-        script.append("result.state = State.FAILURE\n");
-
-        if (status != null && !status.isEmpty()) {
-            script.append("result.code = ").append(status).append("\n");
+        if (status == null || status.isEmpty()) {
+            status = "500"; // Default status
         }
-
-        if (payload != null && !payload.isEmpty()) {
-            script.append("result.error = '{\"error\":\"").append(payload).append("\"}'\n");
+        if (payload == null || payload.isEmpty()) {
+            payload = "application/json"; // Default payload
         }
-
-        if (payloadHeader != null && !payloadHeader.isEmpty()) {
-            script.append("result.contentType = '").append(payloadHeader).append("'\n");
-        }
-
-        return script.toString();
+        return String.format(RAISE_FAULT_GROOVY, status, payload, payloadHeader);
     }
 }
