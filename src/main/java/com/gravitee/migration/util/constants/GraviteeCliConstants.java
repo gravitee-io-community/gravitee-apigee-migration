@@ -45,6 +45,16 @@ public class GraviteeCliConstants {
         public static final String KEY_LESS = "KEY_LESS";
         public static final String STATUS = "status";
         public static final String VALIDATION = "validation";
+        public static final String METHOD = "method";
+        public static final String VARIABLES = "variables";
+        public static final String FIRE_AND_FORGET = "fireAndForget";
+        public static final String EXIT_ON_ERROR = "exitOnError";
+        public static final String ERROR_CONDITION = "errorCondition";
+        public static final String ERROR_STATUS_CODE = "errorStatusCode";
+        public static final String ADD_HEADERS = "addHeaders";
+        public static final String PROPAGATE_API_KEY = "propagateApiKey";
+        public static final String X_GRAVITEE_API_KEY = "X-Gravitee-Api-Key";
+        public static final String STYLESHEET = "stylesheet";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -65,6 +75,18 @@ public class GraviteeCliConstants {
         public static final String VERIFY_JWT = "VerifyJWT";
         public static final String DECODE_JWT = "DecodeJWT";
         public static final String SERVICE_CALLOUT = "ServiceCallout";
+        public static final String RAISE_FAULT = "RaiseFault";
+    }
+
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class PolicyType {
+        public static final String GROOVY = "groovy";
+        public static final String ASSIGN_ATTRIBUTES = "policy-assign-attributes";
+        public static final String JAVASCRIPT = "javascript";
+        public static final String HTTP_CALLOUT = "policy-http-callout";
+        public static final String TRANSFORM_HEADERS = "transform-headers";
+        public static final String API_KEY = "api-key";
+        public static final String XSLT = "xslt";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -93,6 +115,9 @@ public class GraviteeCliConstants {
         public static final String VALUE = "value";
         public static final String PARAMETERS = "parameters";
         public static final String ATTRIBUTES = "attributes";
+        public static final String SCRIPT = "script";
+        public static final String SCOPE = "scope";
+        public static final String READ_CONTENT = "readContent";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)

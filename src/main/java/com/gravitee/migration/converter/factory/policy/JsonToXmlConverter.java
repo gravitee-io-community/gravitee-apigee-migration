@@ -2,6 +2,7 @@ package com.gravitee.migration.converter.factory.policy;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
+import com.gravitee.migration.converter.factory.dto.JsonToXmlDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -11,8 +12,10 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.CONFIGURATION;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.JSON_TO_XML;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
+import static com.gravitee.migration.util.constants.GroovyConstants.JSON_TO_XML_GROOVY;
 
 /**
  * Converts JSONToXML policy from APIgee to Gravitee.
@@ -30,15 +33,45 @@ public class JsonToXmlConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
-        var name = xPath.evaluate("/JSONToXML/@name", apiGeePolicy);
-
-        var phaseObjectNode = createBaseScopeNode(stepNode, name, "json-xml", scopeArray);
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws XPathExpressionException {
+        var config = new JsonToXmlDto(
+                xPath.evaluate("/JSONToXML/@name", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/NullValue", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/NamespaceBlockName", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/DefaultNamespaceNodeName", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/NamespaceSeparator", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/TextNodeName", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/AttributeBlockName", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/AttributePrefix", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/InvalidCharsReplacement", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/ObjectRootElementName", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/ArrayRootElementName", apiGeePolicy),
+                xPath.evaluate("/JSONToXML/Options/ArrayItemElementName", apiGeePolicy)
+        );
+        var phaseObjectNode = createBaseScopeNode(stepNode, config.name(), GROOVY, scopeArray);
 
         var configurationObject = phaseObjectNode.putObject(CONFIGURATION);
-        var rootJsonElement = xPath.evaluate("/JSONToXML/Options/ObjectRootElementName", apiGeePolicy);
-        configurationObject.put("rootElement", rootJsonElement);
+        configurationObject.put(SCOPE, scope.toUpperCase());
+
+        var script = generateGroovyScript(config, scope);
+        configurationObject.put(SCRIPT, script);
     }
 
-
+    public String generateGroovyScript(JsonToXmlDto config, String scope) {
+        return String.format(
+                JSON_TO_XML_GROOVY,
+                config.nullValue(),
+                config.objectRootElementName(),
+                config.arrayRootElementName(),
+                config.arrayItemElementName(),
+                config.attributePrefix(),
+                config.attributeBlockName(),
+                config.textNodeName(),
+                config.namespaceBlockName(),
+                config.defaultNamespaceNodeName(),
+                config.namespaceSeparator(),
+                config.invalidCharsReplacement(),
+                scope
+        );
+    }
 }
