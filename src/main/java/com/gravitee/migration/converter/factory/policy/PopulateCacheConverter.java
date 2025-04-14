@@ -13,6 +13,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.StringUtils.addPrefixToKey;
 import static com.gravitee.migration.util.StringUtils.buildKeyFragmentString;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.POPULATE_CACHE;
 
@@ -32,7 +33,11 @@ public class PopulateCacheConverter implements PolicyConverter {
         var policyName = xPath.evaluate("/PopulateCache/@name", apiGeePolicy);
         var cacheResourceName = xPath.evaluate("/PopulateCache/CacheResource", apiGeePolicy);
         var cacheKeyFragments = (NodeList) xPath.evaluate("/PopulateCache/CacheKey/KeyFragment", apiGeePolicy, XPathConstants.NODESET);
+        var prefix = xPath.evaluate("/PopulateCache/CacheKey/Prefix", apiGeePolicy);
         var key = buildKeyFragmentString(cacheKeyFragments);
+
+        // Add prefix to the key if it exists
+        key = addPrefixToKey(prefix, key);
 
         var objectNode = createBaseScopeNode(stepNode, policyName, "data-cache", scopeArray);
         configureCache(objectNode, cacheResourceName, key, apiGeePolicy);
@@ -42,21 +47,8 @@ public class PopulateCacheConverter implements PolicyConverter {
         var configurationObject = objectNode.putObject("configuration");
         configurationObject.put("resource", cacheResourceName);
         configurationObject.put("cacheKey", key);
-        configurationObject.put("timeToLive", 3600); // Default TTL
-        configureMethods(configurationObject);
-        configureSourceValue(configurationObject, apiGeePolicy);
         configurationObject.put("defaultOperation", "SET");
-    }
-
-    private void configureMethods(ObjectNode configurationObject) {
-        var methodsArray = configurationObject.putArray("methods");
-        methodsArray.add("GET");
-        methodsArray.add("POST");
-        methodsArray.add("PUT");
-        methodsArray.add("DELETE");
-        methodsArray.add("PATCH");
-        methodsArray.add("OPTIONS");
-        methodsArray.add("HEAD");
+        configureSourceValue(configurationObject, apiGeePolicy);
     }
 
     private void configureSourceValue(ObjectNode configurationObject, Document apiGeePolicy) throws Exception {

@@ -17,6 +17,10 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.API_KEY;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.TRANSFORM_HEADERS;
 
+/*
+ * Converts VerifyAPIKey policy from APIgee to Gravitee.
+ * This class implements the PolicyConverter interface and provides the logic to convert the VerifyAPIKey policy.
+ */
 @Component
 @RequiredArgsConstructor
 public class VerifyAPIKeyConverter implements PolicyConverter {

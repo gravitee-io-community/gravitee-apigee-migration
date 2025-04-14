@@ -14,6 +14,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.StringUtils.addPrefixToKey;
 import static com.gravitee.migration.util.StringUtils.buildKeyFragmentString;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.LOOKUP_CACHE;
 
@@ -35,21 +36,24 @@ public class LookupCacheConverter implements PolicyConverter {
     public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
         var policyName = xPath.evaluate("/LookupCache/@name", apiGeePolicy);
         var cacheResource = xPath.evaluate("/LookupCache/CacheResource", apiGeePolicy);
-        var cacheKeyFragments = (NodeList) xPath.evaluate("/PopulateCache/CacheKey/KeyFragment", apiGeePolicy, XPathConstants.NODESET);
+        var cacheKeyFragments = (NodeList) xPath.evaluate("/LookupCache/CacheKey/KeyFragment", apiGeePolicy, XPathConstants.NODESET);
+        var prefix = xPath.evaluate("/LookupCache/CacheKey/Prefix", apiGeePolicy);
         var key = buildKeyFragmentString(cacheKeyFragments);
+
+        key = addPrefixToKey(prefix, key);
+
         var assignTo = xPath.evaluate("/LookupCache/AssignTo", apiGeePolicy);
 
         var objectNode = createBaseScopeNode(stepNode, policyName, "data-cache", scopeArray);
         configureCache(objectNode, cacheResource, key, assignTo);
     }
 
-
     private void configureCache(ObjectNode objectNode, String cacheResource, String key, String assignTo) {
         var configurationObject = objectNode.putObject("configuration");
         configurationObject.put("resource", cacheResource);
         configurationObject.put("cacheKey", key);
-        configurationObject.put("timeToLive", 3600); // Default TTL, where do we extract this from?
         configurationObject.put("defaultOperation", "GET");
         configurationObject.put("value", assignTo);
     }
+
 }
