@@ -1,0 +1,6 @@
+import io.gravitee.policy.groovy.PolicyResult.State
+
+result.state = State.FAILURE
+result.code = %s
+result.error = '{"error":"%s"}'
+result.contentType = '%s'

@@ -118,6 +118,7 @@ public class GraviteeCliConstants {
         public static final String SCRIPT = "script";
         public static final String SCOPE = "scope";
         public static final String READ_CONTENT = "readContent";
+        public static final String OVERRIDE_CONTENT = "overrideContent";
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)

@@ -12,6 +12,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static java.util.Objects.isNull;
 
@@ -76,6 +78,21 @@ public class StringUtils {
     }
 
     /**
+     * Adds a prefix to the key if the prefix is not null or empty.
+     *
+     * @param prefix the prefix to add
+     * @param key    the original key
+     * @return the key with the prefix added
+     */
+    public static String addPrefixToKey(String prefix, String key) {
+        if (prefix != null && !prefix.isEmpty()) {
+            return prefix + "__" + key;
+        }
+        return key;
+    }
+
+
+    /**
      * Constructs an endpoints URL by replacing the host part with a placeholder.
      *
      * @param url the original URL
@@ -98,6 +115,15 @@ public class StringUtils {
         return protocol + "{#context.attributes['" + host + "']}" + url.substring(protocol.length() + host.length());
     }
 
+    public static String readFileFromClasspath(String filePath) throws Exception {
+        var classLoader = StringUtils.class.getClassLoader();
+        var resource = classLoader.getResource(filePath);
+        if (resource == null) {
+            throw new IllegalArgumentException("File not found in classpath: " + filePath);
+        }
+        return Files.readString(Paths.get(resource.toURI()));
+    }
+
     private static boolean hasRefAttribute(Node keyFragment) {
         return keyFragment.getAttributes() != null && keyFragment.getAttributes().getNamedItem("ref") != null;
     }
@@ -109,7 +135,7 @@ public class StringUtils {
 
     private static void appendTextContent(StringBuilder result, Node keyFragment) {
         if (!result.isEmpty()) {
-            result.append(":");
+            result.append("__");
         }
         result.append(keyFragment.getTextContent());
     }

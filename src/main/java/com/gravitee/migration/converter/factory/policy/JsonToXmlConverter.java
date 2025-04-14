@@ -4,18 +4,18 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.converter.factory.dto.JsonToXmlDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathExpressionException;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.StringUtils.readFileFromClasspath;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.JSON_TO_XML;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
-import static com.gravitee.migration.util.constants.GroovyConstants.JSON_TO_XML_GROOVY;
 
 /**
  * Converts JSONToXML policy from APIgee to Gravitee.
@@ -25,6 +25,9 @@ import static com.gravitee.migration.util.constants.GroovyConstants.JSON_TO_XML_
 @RequiredArgsConstructor
 public class JsonToXmlConverter implements PolicyConverter {
 
+    @Value("${groovy.json-to-xml}")
+    private String jsonToXmlGroovyFileLocation;
+
     private final XPath xPath;
 
     @Override
@@ -33,7 +36,7 @@ public class JsonToXmlConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws XPathExpressionException {
+    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
         var config = new JsonToXmlDto(
                 xPath.evaluate("/JSONToXML/@name", apiGeePolicy),
                 xPath.evaluate("/JSONToXML/Options/NullValue", apiGeePolicy),
@@ -52,14 +55,19 @@ public class JsonToXmlConverter implements PolicyConverter {
 
         var configurationObject = phaseObjectNode.putObject(CONFIGURATION);
         configurationObject.put(SCOPE, scope.toUpperCase());
+        configurationObject.put(OVERRIDE_CONTENT, true);
+        configurationObject.put(READ_CONTENT, true);
 
         var script = generateGroovyScript(config, scope);
         configurationObject.put(SCRIPT, script);
     }
 
-    public String generateGroovyScript(JsonToXmlDto config, String scope) {
+    public String generateGroovyScript(JsonToXmlDto config, String scope) throws Exception {
+
+        var policyString = readFileFromClasspath(jsonToXmlGroovyFileLocation);
+
         return String.format(
-                JSON_TO_XML_GROOVY,
+                policyString,
                 config.nullValue(),
                 config.objectRootElementName(),
                 config.arrayRootElementName(),

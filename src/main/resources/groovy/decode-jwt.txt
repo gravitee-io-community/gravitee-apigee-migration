@@ -1,0 +1,17 @@
+import groovy.json.JsonSlurper
+
+def scope = %s
+def authHeader = scope.headers['Authorization']?.getAt(0)
+def token = authHeader?.replace("Bearer ", "")
+
+if (token) {
+    def parts = token.split("\\.")
+    if (parts.length == 3) {
+        def payloadEncoded = parts[1]
+        def payloadDecoded = new String(payloadEncoded.decodeBase64())
+        def claims = new JsonSlurper().parseText(payloadDecoded)
+
+        // Store the claims in context for downstream usage
+        context.attributes['jwt.claims'] = claims
+    }
+}

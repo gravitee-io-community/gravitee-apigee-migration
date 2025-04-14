@@ -6,3 +6,10 @@ spring:
       enabled: true
     script:
       enabled: true
+
+groovy:
+  decode-jwt: "groovy/decode-jwt.txt"
+  json-to-xml: "groovy/json-to-xml.txt"
+  xml-to-json: "groovy/xml-to-json.txt"
+  message-validation: "groovy/message-validation.txt"
+  raise-fault: "groovy/raise-fault.txt"

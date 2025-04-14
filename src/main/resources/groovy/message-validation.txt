@@ -1,0 +1,35 @@
+import groovy.json.JsonSlurper
+            import groovy.util.XmlSlurper
+
+            context.attributes['messagevalidation.failed'] = false
+
+            // Get the 'Content-Type' header
+            def scope = %s
+            def headerValue = scope.headers.get('Content-Type')
+            if (headerValue instanceof List) {
+                headerValue = headerValue.first()  // Get the first element if it's a List
+            }
+
+            // Handle JSON content type
+            if (headerValue?.toLowerCase().contains("json")) {
+                try {
+                    def jsonParser = new JsonSlurper()
+                    def jsonContent = jsonParser.parseText(scope.content)
+                } catch (Exception e) {
+                    // If JSON parsing fails, mark validation as failed
+                    context.attributes['messagevalidation.failed'] = true
+                }
+            }
+            // Handle XML content type
+            else if (headerValue?.toLowerCase().contains("xml")) {
+                try {
+                    def xmlParser = new XmlSlurper()
+                    def xmlContent = xmlParser.parseText(scope.content) // Parses XML content
+                } catch (Exception e) {
+                    // If XML parsing fails, mark validation as failed
+                    context.attributes['messagevalidation.failed'] = true
+                }
+            }
+
+            // Return true only if validation did not fail
+            return !context.attributes['messagevalidation.failed']

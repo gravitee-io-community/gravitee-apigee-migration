@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.util.constants.GraviteeCliConstants;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -12,8 +13,8 @@ import javax.xml.xpath.XPath;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
 import static com.gravitee.migration.util.GraviteeCliUtils.createGroovyConfiguration;
+import static com.gravitee.migration.util.StringUtils.readFileFromClasspath;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
-import static com.gravitee.migration.util.constants.GroovyConstants.DECODE_JWT_GROOVY;
 
 /**
  * Converts DecodeJWT policy from APIgee to Gravitee.
@@ -22,6 +23,9 @@ import static com.gravitee.migration.util.constants.GroovyConstants.DECODE_JWT_G
 @Component
 @RequiredArgsConstructor
 public class DecodeJWTConverter implements PolicyConverter {
+
+    @Value("${groovy.decode-jwt}")
+    private String decodeJwtGroovyFileLocation;
 
     private final XPath xPath;
 
@@ -43,7 +47,8 @@ public class DecodeJWTConverter implements PolicyConverter {
     public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
         var policyName = xPath.evaluate("/DecodeJWT/@name", apiGeePolicy);
         var scopeObject = createBaseScopeNode(stepNode, policyName, GROOVY, scopeArray);
+        var policyString = readFileFromClasspath(decodeJwtGroovyFileLocation);
 
-        createGroovyConfiguration(DECODE_JWT_GROOVY, scope, scopeObject);
+        createGroovyConfiguration(policyString, scope, scopeObject);
     }
 }
