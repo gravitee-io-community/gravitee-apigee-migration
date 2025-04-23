@@ -43,3 +43,13 @@ java -jar target/migration-0.0.1-SNAPSHOT.jar start folderName
 
 The output will be in the location where the tool is started called gravitee_api_output.json
 
+### Flows in Apigee
+
+The pictures below show how the flows in Apigee look like for the proxy endpoint and for the routing rules(target endpoints).
+
+#### Proxy Endpoint
+![Alt text](images/apigee-flows.png)
+
+#### Target Endpoint(Routing Rules)
+![Alt text](images/apigee-target-endpoint.png)
+
