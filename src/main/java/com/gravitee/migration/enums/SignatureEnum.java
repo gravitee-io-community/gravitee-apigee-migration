@@ -2,6 +2,13 @@ package com.gravitee.migration.enums;
 
 import lombok.Getter;
 
+/**
+ * Enum representing different signature algorithms.
+ * <p>
+ * This enum is used to map the signature algorithms used in Apigee to their corresponding values in Gravitee.
+ * Used in VerifyJWT Gravitee policy.
+ * </p>
+ */
 @Getter
 public enum SignatureEnum {
     RS256("RSA_RS256"),

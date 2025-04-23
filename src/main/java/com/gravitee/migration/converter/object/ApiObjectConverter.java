@@ -11,11 +11,15 @@ import org.w3c.dom.Document;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
-import static com.gravitee.migration.util.StringUtils.removeNewlines;
+import static com.gravitee.migration.util.StringUtils.isNotNullOrEmpty;
+import static com.gravitee.migration.util.StringUtils.removeNewLines;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Api.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Api.PATH;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
 
 /**
  * This class is responsible for mapping fields from the Apigee XML to the api object in the Gravitee JSON.
@@ -35,7 +39,7 @@ public class ApiObjectConverter {
      * @param proxyXml       the document containing the proxy information located in proxies folder
      * @param graviteeConfig the root Gravitee JSON object
      */
-    public void mapApiObject(Document rootXml, Document proxyXml, ObjectNode graviteeConfig) throws XPathExpressionException {
+    public void mapApiObject(Document rootXml, Document proxyXml, ObjectNode graviteeConfig, List<Document> targetEndpointXmls) throws XPathExpressionException {
         var apiNode = graviteeConfig.putObject(API_OBJECT);
         // Hardcoded values for Gravitee
         apiNode.put(DEFINITION_VERSION, V4);
@@ -48,7 +52,7 @@ public class ApiObjectConverter {
 
         // Description of the API in gravitee - mapped from rootXml <Description> tag
         var description = xPath.evaluate("/APIProxy/Description", rootXml);
-        apiNode.put(DESCRIPTION, !description.isEmpty() ? removeNewlines(description) : "Migrated from Apigee");
+        apiNode.put(DESCRIPTION, !description.isEmpty() ? removeNewLines(description) : "Migrated from Apigee");
 
         // Version of the API in gravitee - mapped from rootXml 'majorVersion' and 'minorVersion' attributes inside <ConfigurationVersion> tag
         var majorVersion = xPath.evaluate("/APIProxy/ConfigurationVersion/@majorVersion", rootXml);
@@ -62,18 +66,19 @@ public class ApiObjectConverter {
         apiNode.put(UPDATED_AT, DateUtils.convertMillisToIso8601(Long.parseLong(updatedAtMillis)));
 
         mapListeners(proxyXml, apiNode);
-        mapEndpointGroups(apiNode);
+        mapEndpointGroups(apiNode, targetEndpointXmls, !apiName.isEmpty() ? apiName : UUID.randomUUID().toString());
 
         resourcesArray = objectMapper.createArrayNode();
-        apiNode.set("resources", resourcesArray);
+        apiNode.set(RESOURCES, resourcesArray);
     }
 
     public void buildResources(Document apiGeePolicy) throws XPathExpressionException {
         // Extract the name of the cache resource from the policy
         var cacheName = xPath.evaluate("/*/CacheResource", apiGeePolicy);
 
-        // Check if an object with the same name already exists in the resources array
-        checkForExistingResource(cacheName);
+        if (isResourcePresent(resourcesArray, cacheName)) {
+            return;
+        }
 
         // Create a new resource object if no match is found
         var resourceObject = resourcesArray.addObject();
@@ -83,8 +88,8 @@ public class ApiObjectConverter {
 
         // Create the configuration as a JSON string - default values(not present in Apigee)
         var configurationMap = new HashMap<>();
-        configurationMap.put("timeToIdleSeconds", 0);
-        configurationMap.put("timeToLiveSeconds", 0);
+        configurationMap.put("timeToIdleSeconds", 300);
+        configurationMap.put("timeToLiveSeconds", 3600);
         configurationMap.put("maxEntriesLocalHeap", 1000);
 
         String configurationJson;
@@ -97,18 +102,13 @@ public class ApiObjectConverter {
         resourceObject.put("configuration", configurationJson);
     }
 
-    /**
-     * Checks if an object with the same name already exists in the resources array.
-     *
-     * @param resourceName the name of the resource
-     */
-    private void checkForExistingResource(String resourceName) {
-        for (var resourceNode : resourcesArray) {
-            if (resourceNode.has(NAME) && resourceName.equals(resourceNode.get(NAME).asText())) {
-                // Object with the same name already exists, skip creation
-                return;
+    private boolean isResourcePresent(ArrayNode resourcesArray, String cacheName) {
+        for (var resource : resourcesArray) {
+            if (resource.get(NAME).asText().equals(cacheName)) {
+                return true;
             }
         }
+        return false;
     }
 
     /**
@@ -158,29 +158,36 @@ public class ApiObjectConverter {
         var entrypointNode = entryPointsArray.addObject();
 
         // Hardcoded values for Gravitee
-        //! CHECK IF IT IS REQUIRED OR WHERE IT COMES FROM
         entrypointNode.put(TYPE, HTTP_PROXY);
         entrypointNode.put(QOS, AUTO);
         entrypointNode.putObject(CONFIGURATION);
     }
 
-    private void mapEndpointGroups(ObjectNode apiNode) throws XPathExpressionException {
+    private void mapEndpointGroups(ObjectNode apiNode, List<Document> targetEndpointXmls, String apiName) throws XPathExpressionException {
         var endpointGroupsArray = apiNode.putArray(ENDPOINT_GROUPS);
-        var endpointGroupNode = endpointGroupsArray.addObject();
 
-        // Extracts the name of the target endpoint from the targetXml document @name attribute located in the <TargetEndpoint> tag
-        endpointGroupNode.put(NAME, DEFAULT_ENDPOINT);
-        // Hardcoded values for Gravitee
+        for (var targetXml : targetEndpointXmls) {
+            var loadBalancerServerNode = xPath.evaluate("TargetEndpoint/HTTPTargetConnection/LoadBalancer/Server/@name", targetXml);
+            if (isNotNullOrEmpty(loadBalancerServerNode)) {
+                createEndpointGroup(endpointGroupsArray, loadBalancerServerNode, apiName);
+            }
+        }
+
+        // Create the default endpoint group
+        createEndpointGroup(endpointGroupsArray, DEFAULT_ENDPOINT, apiName);
+    }
+
+    private void createEndpointGroup(ArrayNode endpointGroupsArray, String endpointName, String apiName) {
+        var endpointGroupNode = endpointGroupsArray.addObject();
+        endpointGroupNode.put(NAME, endpointName);
         endpointGroupNode.put(TYPE, HTTP_PROXY);
-        //! CHECK SERVICES
         endpointGroupNode.putObject(SERVICES);
 
-        // Hardcoded values for Gravitee
         var loadBalancerOptionsNode = endpointGroupNode.putObject(LOAD_BALANCER);
         loadBalancerOptionsNode.put(TYPE, ROUND_ROBIN);
 
         constructEndpointGroupSharedConfiguration(endpointGroupNode);
-        constructEndpointGroupsEndpoints(endpointGroupNode);
+        constructEndpointGroupsEndpoints(endpointGroupNode, apiName);
     }
 
     private void constructEndpointGroupSharedConfiguration(ObjectNode endpointGroupNode) {
@@ -188,18 +195,18 @@ public class ApiObjectConverter {
         configureSsl(sharedConfigurationNode);
     }
 
-    private void constructEndpointGroupsEndpoints(ObjectNode endpointGroupNode) {
+    private void constructEndpointGroupsEndpoints(ObjectNode endpointGroupNode, String apiName) {
         var endpointsArray = endpointGroupNode.putArray(ENDPOINTS);
 
         // For each target endpoint in apiGee, create an endpoint in Gravitee
-            var endpointNode = endpointsArray.addObject();
-            endpointNode.put(NAME, "Target Backend URL");
-            endpointNode.put(TYPE, HTTP_PROXY);
-            endpointNode.put(WEIGHT, 1);
-            endpointNode.put(INHERIT_CONFIGURATION, true);
-            endpointNode.putObject(CONFIGURATION).put(TARGET, "https://changeMe");
-            endpointNode.putObject(SERVICES);
-            endpointNode.put(SECONDARY, false);
+        var endpointNode = endpointsArray.addObject();
+        endpointNode.put(NAME, "Target Backend URL- " + apiName);
+        endpointNode.put(TYPE, HTTP_PROXY);
+        endpointNode.put(WEIGHT, 1);
+        endpointNode.put(INHERIT_CONFIGURATION, true);
+        endpointNode.putObject(CONFIGURATION).put(TARGET, "https://changeMe-" + apiName);
+        endpointNode.putObject(SERVICES);
+        endpointNode.put(SECONDARY, false);
 
     }
 

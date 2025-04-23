@@ -5,6 +5,7 @@ import com.gravitee.migration.service.filereader.FileReaderService;
 import com.gravitee.migration.service.migration.MigrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 
@@ -22,6 +23,9 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.
 @Slf4j
 @RequiredArgsConstructor
 public class MigrationServiceImpl implements MigrationService {
+
+    @Value("${gravitee.dictionary.output}")
+    private String dictionaryOutputCsv;
 
     private final ApiGeeToGraviteeConverter apiGeeToGraviteeConverter;
     private final FileReaderService fileReaderService;
@@ -41,6 +45,7 @@ public class MigrationServiceImpl implements MigrationService {
             validateApiGeeDocument(apiProxyRootXml);
 
             String graviteeApiConfig = apiGeeToGraviteeConverter.apiGeeToGraviteeConverter(apiProxyRootXml, proxyDocument, policyDocuments, targetDocuments);
+            fileReaderService.dictionaryMapToCsv(dictionaryOutputCsv);
 
             saveJsonToFile(graviteeApiConfig);
 

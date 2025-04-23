@@ -6,19 +6,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
 import javax.xml.xpath.XPath;
 
-import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import java.util.Map;
+
+import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.GraviteeCliUtils.createGroovyConfiguration;
-import static com.gravitee.migration.util.StringUtils.readFileFromClasspath;
+import static com.gravitee.migration.util.StringUtils.readGroovyPolicy;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.MESSAGE_VALIDATION;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
 
 /**
- * Converts MessageValidation policy from APIgee to Gravitee.
- * This class implements the PolicyConverter interface and provides the logic to convert the MessageValidation policy.
+ * <p>Converts MessageValidation policy from Apigee to Gravitee.</p>
+ *
+ * <p>This class implements the PolicyConverter interface and provides the logic
+ * to convert the MessageValidation policy.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -34,12 +37,26 @@ public class MessageValidationConverter implements PolicyConverter {
         return MESSAGE_VALIDATION.equals(policyType);
     }
 
+    /**
+     * Converts the MessageValidation policy from Apigee to Gravitee.
+     * This policy only validates the body of the XML or JSON, if it is not valid it sets attribute "messagevalidation.failed" == true
+     * in the context, which can be later used as a condition check.
+     *
+     * @param condition   The condition to be applied to the policy.
+     * @param apiGeePolicy   The policy document.
+     * @param phaseArray     The array node to which the converted policy will be added (e.g., request, response).
+     * @param phase          The phase of the policy (e.g., request, response).
+     * @throws Exception if an error occurs during conversion.
+     */
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
+    public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws Exception {
+        // Extract the policy name
         var policyName = xPath.evaluate("/MessageValidation/@name", apiGeePolicy);
-
-        var scopeObject = createBaseScopeNode(stepNode, policyName, GROOVY, scopeArray);
-        var policyString = readFileFromClasspath(messageValidationGroovyFileLocation);
-        createGroovyConfiguration(policyString, scope, scopeObject);
+        // Create a base phase node for the policy
+        var phaseObject = createBasePhaseObject(condition, policyName, GROOVY, phaseArray, conditionMappings);
+        // Read the Groovy script from the specified text file
+        var policyString = readGroovyPolicy(messageValidationGroovyFileLocation);
+        // Create the groovy configuration
+        createGroovyConfiguration(policyString, phase, phaseObject);
     }
 }

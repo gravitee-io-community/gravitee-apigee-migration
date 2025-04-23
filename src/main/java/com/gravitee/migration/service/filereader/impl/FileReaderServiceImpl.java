@@ -9,6 +9,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -21,24 +22,22 @@ public class FileReaderServiceImpl implements FileReaderService {
     private String inputFolderLocation;
     private String currentFolder;
     private String apiProxyFolderLocation;
+    private final Map<String, String> dictionaryMap = new HashMap<>();
 
     @Override
     public String findApiProxyDirectory(String folderLocation) {
         folderLocation = folderLocation.replace(",", " ");
         File rootFolder = new File(folderLocation);
 
-        if (rootFolder.exists() && rootFolder.isDirectory()) {
-            for (File projectFolder : Objects.requireNonNull(rootFolder.listFiles(File::isDirectory))) {
-                // Look for apiproxy folder within each project folder
-                File possibleApiProxyFolder = new File(projectFolder, API_PROXY);
+        // Look for the apiproxy folder directly in the provided folder location
+        File possibleApiProxyFolder = new File(rootFolder, API_PROXY);
 
-                if (possibleApiProxyFolder.exists() && possibleApiProxyFolder.isDirectory()) {
-                    inputFolderLocation = rootFolder.getAbsolutePath();
-                    apiProxyFolderLocation = possibleApiProxyFolder.getAbsolutePath();
-                    return possibleApiProxyFolder.getAbsolutePath(); // Return the absolute path of the found apiproxy folder
-                }
-            }
+        if (possibleApiProxyFolder.exists() && possibleApiProxyFolder.isDirectory()) {
+            inputFolderLocation = rootFolder.getAbsolutePath();
+            apiProxyFolderLocation = possibleApiProxyFolder.getAbsolutePath();
+            return possibleApiProxyFolder.getAbsolutePath(); // Return the absolute path of the found apiproxy folder
         }
+
         throw new IllegalArgumentException("No apiproxy folder found in the specified location.");
     }
 
@@ -74,14 +73,51 @@ public class FileReaderServiceImpl implements FileReaderService {
 
     @Override
     public File findFolderStartingWith(String folderNamePrefix) {
-        String fileInput = inputFolderLocation + "/SharedFlows";
-        File parentDir = new File(fileInput);
-        File[] matchingFolders = parentDir.listFiles((dir, name) -> name.startsWith(folderNamePrefix));
-        if (matchingFolders == null || matchingFolders.length == 0) {
-            throw new IllegalArgumentException("No folder found starting with: " + folderNamePrefix);
+        // Get the parent of inputFolderLocation
+        File inputFolder = new File(inputFolderLocation);
+        File parentDir = inputFolder.getParentFile();
+
+        if (parentDir != null) {
+            // Search recursively in all folders and subfolders of the parent directory
+            File result = searchRecursively(parentDir, folderNamePrefix);
+            if (result != null) {
+                currentFolder = result.getAbsolutePath();
+                return result;
+            }
         }
-        currentFolder = matchingFolders[0].getAbsolutePath();
-        return matchingFolders[0];
+
+        // If still not found, throw an exception
+        throw new IllegalArgumentException("No folder found starting with: " + folderNamePrefix);
+    }
+
+    private File searchRecursively(File directory, String folderNamePrefix) {
+        File matchingFolder = findMatchingFolder(directory, folderNamePrefix);
+        if (matchingFolder != null) {
+            return matchingFolder;
+        }
+
+        return searchInSubFolders(directory, folderNamePrefix);
+    }
+
+    private File findMatchingFolder(File directory, String folderNamePrefix) {
+        File[] matchingFolders = directory.listFiles((dir, name) -> name.startsWith(folderNamePrefix));
+        if (matchingFolders != null && matchingFolders.length > 0) {
+            return matchingFolders[0];
+        }
+        return null;
+    }
+
+    private File searchInSubFolders(File directory, String folderNamePrefix) {
+        File[] subFolders = directory.listFiles(File::isDirectory);
+        if (subFolders != null) {
+            for (File subFolder : subFolders) {
+                File result = searchRecursively(subFolder, folderNamePrefix);
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -104,6 +140,7 @@ public class FileReaderServiceImpl implements FileReaderService {
         return null;
     }
 
+    @Override
     public Path findFirstChildFolder(String folderPath) {
         File folder = new File(folderPath);
         File[] childFolders = folder.listFiles(File::isDirectory);
@@ -111,6 +148,24 @@ public class FileReaderServiceImpl implements FileReaderService {
             return childFolders[0].toPath();
         } else {
             throw new IllegalArgumentException("No child folders found in the specified location.");
+        }
+    }
+
+    @Override
+    public void addValueToDictionaryMap(String key, String value) {
+        if (key != null && !key.isEmpty() && value != null && !value.isEmpty()) {
+            dictionaryMap.put(key, value);
+        }
+    }
+
+    @Override
+    public void dictionaryMapToCsv(String outputCsv) throws IOException {
+        File file = new File(outputCsv);
+        try (FileWriter writer = new FileWriter(file)) {
+            for (Map.Entry<String, String> entry : dictionaryMap.entrySet()) {
+                writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+            }
+            writer.flush(); // Ensure all data is written to the file
         }
     }
 

@@ -19,17 +19,23 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Objects;
 
-import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
+import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.convertDocumentToString;
+import static com.gravitee.migration.util.StringUtils.isNotNullOrEmpty;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.STYLESHEET;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.XSLT;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.ASSIGN_ATTRIBUTES;
 
 /**
- * This class is responsible for converting XSLT policies from Apigee to Gravitee format.
- * It implements the PolicyConverter interface and provides methods to convert XSLT policies.
+ * <p>Converts XSLT policy from Apigee to Gravitee.</p>
+ *
+ * <p>This class implements the PolicyConverter interface and provides the logic
+ * to convert the XSLT policy.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -44,11 +50,15 @@ public class XSLTConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
+    public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws Exception {
+        // Extract properties
         var policyName = xPath.evaluate("/XSL/@name", apiGeePolicy);
+        var outputVariable = xPath.evaluate("/XSL/OutputVariable", apiGeePolicy);
+        // Extract the xslt document from the resources folder
         var xslDocument = extractCorrespondingDocument(apiGeePolicy);
 
-        createConfigurationForXslt(stepNode, policyName, xslDocument, apiGeePolicy, scopeArray, scope);
+        createConfigurationForXslt(condition, policyName, xslDocument, apiGeePolicy, phaseArray, phase, conditionMappings);
+        registerOutputVariableInContext(condition, outputVariable, phaseArray, policyName, phase, conditionMappings);
     }
 
     private Document extractCorrespondingDocument(Document apiGeePolicy) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
@@ -71,9 +81,10 @@ public class XSLTConverter implements PolicyConverter {
         return fileReaderService.findDocumentByName(sharedFlowResources, fileName);
     }
 
-    private void createConfigurationForXslt(Node stepNode, String fileName, Document xsltDocument, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
+    private void createConfigurationForXslt(String condition, String fileName, Document xsltDocument, Document apiGeePolicy, ArrayNode scopeArray, String scope
+    , Map<String, String> conditionMappings) throws Exception {
         // Create the base scope node for the XSLT policy
-        var scopeObjectNode = createBaseScopeNode(stepNode, fileName, GraviteeCliConstants.PolicyType.XSLT, scopeArray);
+        var scopeObjectNode = createBasePhaseObject(condition, fileName, GraviteeCliConstants.PolicyType.XSLT, scopeArray, conditionMappings);
         // Create the configuration object for the XSLT policy
         var configurationObject = scopeObjectNode.putObject(CONFIGURATION);
         configurationObject.put(SCOPE, scope.toUpperCase());
@@ -84,11 +95,11 @@ public class XSLTConverter implements PolicyConverter {
     }
 
     private void createXslParameters(ObjectNode policyObjectNode, Document apiGeePolicy) throws XPathExpressionException {
-        // Extract the parameters from the APIgee policy
+        // Extract the parameters from the Apigee policy
         NodeList parameterValues = (NodeList) xPath.evaluate("/XSL/Parameters/Parameter", apiGeePolicy, XPathConstants.NODESET);
 
         // Only create the parameters array if there are parameters present
-        if (parameterValues.getLength() > 0) {
+        if (parameterValues != null && parameterValues.getLength() > 0) {
             var parameters = policyObjectNode.putArray(PARAMETERS);
 
             for (int i = 0; i < parameterValues.getLength(); i++) {
@@ -108,4 +119,17 @@ public class XSLTConverter implements PolicyConverter {
             parameterObject.put(VALUE, value);
         }
     }
+
+    private void registerOutputVariableInContext(String condition, String outputVariable, ArrayNode scopeArray, String policyName, String scope, Map<String, String> conditionMappings) throws XPathExpressionException {
+        if (isNotNullOrEmpty(outputVariable)) {
+            var scopeObject = createBasePhaseObject(condition, policyName, ASSIGN_ATTRIBUTES, scopeArray, conditionMappings);
+            var configurationObject = scopeObject.putObject(CONFIGURATION);
+            var attributesArray = configurationObject.putArray(ATTRIBUTES);
+            var attributeObject = attributesArray.addObject();
+
+            attributeObject.put(NAME, outputVariable);
+            attributeObject.put(VALUE, Objects.equals(scope, REQUEST) ? REQUEST_CONTENT_WRAPPED : RESPONSE_CONTENT_WRAPPED);
+        }
+    }
+
 }

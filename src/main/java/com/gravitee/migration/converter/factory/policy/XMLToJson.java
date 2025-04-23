@@ -6,21 +6,26 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
 
-import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
-import static com.gravitee.migration.util.StringUtils.readFileFromClasspath;
+import java.util.Map;
+
+import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
+import static com.gravitee.migration.util.StringUtils.readGroovyPolicy;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.XML_TO_JSON;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
 
 /**
- * Converts XMLToJSON policy from APIgee to Gravitee.
- * This class implements the PolicyConverter interface and provides the logic to convert the XMLToJSON policy.
+ * <p>Converts XMLToJSON policy from Apigee to Gravitee.</p>
+ *
+ * <p>This class implements the PolicyConverter interface and provides the logic
+ * to convert the XMLToJSON policy. Uses groovy custom policy to have all features that the Apigee
+ * XMLToJSON policy offers</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -31,13 +36,35 @@ public class XMLToJson implements PolicyConverter {
 
     private final XPath xPath;
 
+    private static final String WARNING = """
+            ##############################################################
+            #                      SECURITY WARNING                      #
+            ##############################################################
+            - You are using the XMLtoJSON policy, which is a Groovy script.
+            - In order for the policy to work the following security configurations need to be added in the groovy sandbox
+            - class groovy.xml.XmlSlurper
+            - class groovy.xml.slurpersupport.GPathResult
+            - class groovy.xml.slurpersupport.NodeChild
+            """;
+
     @Override
     public boolean supports(String policyType) {
         return XML_TO_JSON.equals(policyType);
     }
 
+    /**
+     * Converts the XMLToJSON policy from Apigee to Gravitee.
+     * Groovy policy to match the XMLToJSON policy in Apigee.
+     *
+     * @param condition     The condition to be applied to the policy.
+     * @param apiGeePolicy The policy document.
+     * @param phaseArray   The array node to which the converted policy will be added (e.g., request or response).
+     * @param phase        The phase of the policy (e.g., request, response).
+     * @throws Exception if an error occurs during conversion.
+     */
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String scope) throws Exception {
+    public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws Exception {
+        System.out.println(WARNING);
         // Extract values
         var name = xPath.evaluate("/XMLToJSON/@name", apiGeePolicy);
         var recognizeNumber = Boolean.parseBoolean(xPath.evaluate("/XMLToJSON/Options/RecognizeNumber", apiGeePolicy));
@@ -50,18 +77,30 @@ public class XMLToJson implements PolicyConverter {
         // Construct arrays string
         String treatAsArrayString = convertNodeListToCommaSeparatedString(treatAsArray);
 
-        var scopeNode = createBaseScopeNode(stepNode, name, GROOVY, scopeArray);
+        // Construct the script
+        var script = createGroovyPolicy(phase, nullValue, recognizeNumber, recognizeBoolean, recognizeNull, stripLevel, treatAsArrayString);
+
+        // Create a base scope node for the policy
+        createBaseObjectObject(condition, name, phaseArray, phase, script, conditionMappings);
+    }
+
+    private void createBaseObjectObject(String condition, String name, ArrayNode scopeArray, String phase, String script, Map<String, String> conditionMappings) throws XPathExpressionException {
+        // Create a base scope node for the policy
+        var scopeNode = createBasePhaseObject(condition, name, GROOVY, scopeArray, conditionMappings);
 
         var configurationObject = scopeNode.putObject(CONFIGURATION);
-        configurationObject.put(SCOPE, scope.toUpperCase());
-        var script = createGroovyPolicy(scope, nullValue, recognizeNumber, recognizeBoolean, recognizeNull, stripLevel, treatAsArrayString);
+        configurationObject.put(READ_CONTENT, true);
+        configurationObject.put(OVERRIDE_CONTENT, true);
+        configurationObject.put(SCOPE, phase.toUpperCase());
         configurationObject.put(SCRIPT, script);
     }
 
     private String createGroovyPolicy(String scope, String nullValueInput, boolean recognizeNumber, boolean recognizeBoolean, boolean recognizeNull,
                                       Integer stripLevels, String treatAsArray) throws Exception {
 
-        var policyString = readFileFromClasspath(xmlToJsonGroovyFileLocation);
+        // Read the Groovy script from the specified text file
+        var policyString = readGroovyPolicy(xmlToJsonGroovyFileLocation);
+        // Handle null value input, if it is not present the policy should act different(explained in XMLtoJSON Apigee documentation)
         var nullValue = handleNullValueInput(nullValueInput);
 
         return String.format(
@@ -81,6 +120,7 @@ public class XMLToJson implements PolicyConverter {
     }
 
     private String convertNodeListToCommaSeparatedString(NodeList nodeList) {
+        // Convert NodeList to a comma-separated string that will be added to the groovy script (ex. output ["Array/test", "Array/result"])
         StringBuilder result = new StringBuilder("[");
         for (int i = 0; i < nodeList.getLength(); i++) {
             if (i > 0) {

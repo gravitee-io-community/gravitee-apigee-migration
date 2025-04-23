@@ -8,17 +8,21 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.XMLConstants;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.*;
+import java.util.stream.Collectors;
 
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.JWT;
 import static java.util.Objects.isNull;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class StringUtils {
+
+    private static final String KEY_FRAGMENT_SEPARATOR = "__";
 
     /**
      * Removes all newlines from the given string.
@@ -26,7 +30,7 @@ public class StringUtils {
      * @param input the input string
      * @return the string without newlines
      */
-    public static String removeNewlines(String input) {
+    public static String removeNewLines(String input) {
         if (isNull(input) || input.isEmpty()) {
             return input;
         }
@@ -39,9 +43,9 @@ public class StringUtils {
      *
      * @param doc the Document object to convert
      * @return the string representation of the Document
-     * @throws Exception if an error occurs during conversion
+     * @throws TransformerException if an error occurs during conversion
      */
-    public static String convertDocumentToString(Document doc) throws Exception {
+    public static String convertDocumentToString(Document doc) throws TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
 
         // Disable access to external DTDs and stylesheets
@@ -54,8 +58,23 @@ public class StringUtils {
         return writer.getBuffer().toString();
     }
 
+
     /**
-     * Builds a key fragment string from the given NodeList of key fragments.
+     * Builds a cache key from the given key fragments and prefix.
+     *
+     * @param cacheKeyFragments the NodeList of cache key fragments
+     * @param prefix            the prefix to add to the key
+     * @return the constructed cache key
+     */
+    public static String buildCacheKey(NodeList cacheKeyFragments, String prefix) {
+        // Builds a key fragment string from the given key fragments in the <KeyFragment> tag.
+        var key = buildKeyFragmentString(cacheKeyFragments);
+        return addPrefixToKey(prefix, key);
+    }
+
+    /**
+     * Builds a key fragment string from the given key fragments in the <KeyFragment> tag.
+     * Concatenates the key fragments with "__" and handles the "ref" attribute.
      *
      * @param keyFragments the NodeList of key fragments
      * @return the constructed key fragment string
@@ -68,7 +87,6 @@ public class StringUtils {
 
             if (hasRefAttribute(keyFragment)) {
                 appendRefValue(result, keyFragment);
-                break; // Stop processing further KeyFragments
             } else {
                 appendTextContent(result, keyFragment);
             }
@@ -86,11 +104,20 @@ public class StringUtils {
      */
     public static String addPrefixToKey(String prefix, String key) {
         if (prefix != null && !prefix.isEmpty()) {
-            return prefix + "__" + key;
+            return prefix + KEY_FRAGMENT_SEPARATOR + key;
         }
         return key;
     }
 
+    /**
+     * Checks if a string is not null and not empty.
+     *
+     * @param str the string to check
+     * @return true if the string is not null and not empty, false otherwise
+     */
+    public static boolean isNotNullOrEmpty(String str) {
+        return str != null && !str.isEmpty();
+    }
 
     /**
      * Constructs an endpoints URL by replacing the host part with a placeholder.
@@ -98,44 +125,104 @@ public class StringUtils {
      * @param url the original URL
      * @return the transformed URL with a placeholder for the host
      */
-    public static String constructEndpointsUrl(String url) {
+    public static String constructEndpointsUrl(String url, String dictionaryName) {
         // Extract the protocol part (e.g., "http://" or "https://")
         String protocol = url.substring(0, url.indexOf("//") + 2);
 
         // Extract the part between the protocol and the next "/"
         String baseUrl = url.substring(protocol.length());
-        String host = baseUrl.split("/")[0]; // Get the host part
+        String host = baseUrl.split("/")[0]; // Get the host part (e.g., "example.com")
 
-        // Check if the host contains a placeholder or is already in lowercase
+        // Check if the host contains a placeholder or is already in lowercase (e.g., DYNAMIC_URL or example.com")
         if (host.matches(".*\\{.*}.*") || host.equals(host.toLowerCase())) {
             return url; // Return the URL as is
         }
 
         // Transform the URL
-        return protocol + "{#context.attributes['" + host + "']}" + url.substring(protocol.length() + host.length());
+        return protocol + String.format(DICTIONARY_FORMAT_WRAPPED, dictionaryName, host) + url.substring(protocol.length() + host.length());
     }
 
-    public static String readFileFromClasspath(String filePath) throws Exception {
-        var classLoader = StringUtils.class.getClassLoader();
-        var resource = classLoader.getResource(filePath);
-        if (resource == null) {
-            throw new IllegalArgumentException("File not found in classpath: " + filePath);
+    /**
+     * Removes curly braces from the input string.
+     *
+     * @param input the input string
+     * @return the string without curly braces
+     */
+    public static String removeCurlyBraces(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
         }
-        return Files.readString(Paths.get(resource.toURI()));
+        return input.replace("{", "").replace("}", "");
+    }
+
+    /**
+     * Extracts the base URL from the given URL.
+     *
+     * @param url the original URL
+     * @return the base URL (e.g., "example.com", "DYNAMIC_URL")
+     */
+    public static String extractBaseUrl(String url) {
+        // Extract the protocol part (e.g., "http://" or "https://")
+        String protocol = url.substring(0, url.indexOf("//") + 2);
+
+        // Extract the part between the protocol and the next "/"
+        String baseUrl = url.substring(protocol.length());
+
+        return baseUrl.split("/")[0];
+    }
+
+    /**
+     * Wraps a value in context attributes format.
+     *
+     * @param value the value to wrap
+     * @return the wrapped value (e.g., "{#context.attributes['value']}")
+     */
+    public static String wrapValueInContextAttributes(String value) {
+        return String.format(CONTEXT_ATTRIBUTE_FORMAT_WRAPPED, value);
+    }
+
+    /**
+     * Reads a Groovy policy file from the specified absolute path.
+     *
+     * @return the content of the Groovy policy file as a string
+     * @throws IOException if an error occurs while reading the file
+     */
+    public static String readGroovyPolicy(String resourcePath) throws IOException {
+        InputStream inputStream = StringUtils.class.getClassLoader().getResourceAsStream(resourcePath);
+        if (inputStream == null) {
+            throw new FileNotFoundException("Resource not found: " + resourcePath);
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            return reader.lines().collect(Collectors.joining(System.lineSeparator()));
+        }
     }
 
     private static boolean hasRefAttribute(Node keyFragment) {
-        return keyFragment.getAttributes() != null && keyFragment.getAttributes().getNamedItem("ref") != null;
+        return keyFragment.getAttributes() != null && keyFragment.getAttributes().getNamedItem(REF) != null;
     }
 
     private static void appendRefValue(StringBuilder result, Node keyFragment) {
-        String refValue = keyFragment.getAttributes().getNamedItem("ref").getNodeValue();
-        result.append(":{#context.attributes['").append(refValue).append("']}");
+        String refValue = keyFragment.getAttributes().getNamedItem(REF).getNodeValue();
+
+        if (!result.isEmpty()) {
+            result.append(KEY_FRAGMENT_SEPARATOR);
+        }
+
+        if (refValue.startsWith(JWT)) {
+            // Extract the last part of the string after the last "."
+            String lastPart = refValue.substring(refValue.lastIndexOf('.') + 1);
+            // Format it as {#context.attributes['jwt.claims']['lastPart']}
+            result.append(String.format("{#context.attributes['jwt.claims']['%s']}", lastPart));
+        } else {
+            // Default behavior
+            result.append(String.format(CONTEXT_ATTRIBUTE_FORMAT_WRAPPED, refValue));
+        }
     }
 
     private static void appendTextContent(StringBuilder result, Node keyFragment) {
         if (!result.isEmpty()) {
-            result.append("__");
+            result.append(KEY_FRAGMENT_SEPARATOR);
         }
         result.append(keyFragment.getTextContent());
     }

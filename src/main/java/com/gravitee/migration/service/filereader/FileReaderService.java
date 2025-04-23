@@ -16,6 +16,7 @@ import java.util.Map;
  */
 public interface FileReaderService {
 
+//    void processPolicies(String rootFolder, String outputCsv) throws Exception;
     /**
      * Finds the "apiproxy" directory within the specified folder location.
      *
@@ -80,5 +81,18 @@ public interface FileReaderService {
      * @throws IOException if an error occurs while reading the files.
      */
     Map<String, String> parseJavaScriptFiles(String folderLocation, String folderName) throws IOException;
+
+    /**
+     * Adds a value to the dictionary map.
+     *
+     * @param key   The key to add to the dictionary map.
+     * @param value The value to add to the dictionary map.
+     */
+    void addValueToDictionaryMap(String key, String value);
+
+    /**
+     * Converts the dictionary map to a CSV file. The values in the dictionary map need to be populated by the user.
+     */
+    void dictionaryMapToCsv(String outputCsv) throws IOException;
 
 }

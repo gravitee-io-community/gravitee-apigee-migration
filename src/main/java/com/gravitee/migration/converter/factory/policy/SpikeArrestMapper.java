@@ -4,21 +4,29 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.enums.RateLimitIntervalMapper;
+import com.gravitee.migration.util.constants.GraviteeCliConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 
-import static com.gravitee.migration.util.GraviteeCliUtils.createBaseScopeNode;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.CONFIGURATION;
+import java.util.Map;
+
+import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
+import static com.gravitee.migration.util.StringUtils.wrapValueInContextAttributes;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.ADD_HEADERS;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.SPIKE;
 import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.SPIKE_ARREST;
+import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.ASSIGN_ATTRIBUTES;
 
 /**
- * Converts the SpikeArrest policy from APIgee to Gravitee format.
- * The SpikeArrest policy is used to limit the rate of requests to an API.
+ * <p>Converts the SpikeArrest policy from Apigee to Gravitee format.</p>
+ *
+ * <p>Implements the PolicyConverter interface and provides the logic
+ *  to convert the SpikeArrestMapper policy.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -31,37 +39,61 @@ public class SpikeArrestMapper implements PolicyConverter {
         return SPIKE_ARREST.equals(policyType);
     }
 
+    /**
+     * Converts the SpikeArrest policy from Apigee to Gravitee.
+     *
+     * @param condition The condition to be applied to the policy.
+     * @param apiGeePolicy The Apigee policy document.
+     * @param phaseArray   The array node to which the converted policy will be added (e.g., request, response).
+     * @param phase        The phase of the policy (e.g., request, response).
+     * @throws XPathExpressionException if an error occurs during XPath evaluation.
+     */
     @Override
-    public void convert(Node stepNode, Document apiGeePolicy, ArrayNode scopeArray, String phase) throws XPathExpressionException {
-        var name = xPath.evaluate("/SpikeArrest/@name", apiGeePolicy);
-        var scopeNode = createBaseScopeNode(stepNode, name, "spike-arrest", scopeArray);
+    public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws XPathExpressionException {
+        // Extract properties
+        var policyName = xPath.evaluate("/SpikeArrest/@name", apiGeePolicy);
+        var scopeNode = createBasePhaseObject(condition, policyName, GraviteeCliConstants.PolicyType.SPIKE_ARREST, phaseArray, conditionMappings);
+        var identifier = xPath.evaluate("/SpikeArrest/Identifier/@ref", apiGeePolicy);
 
         constructRequestConfiguration(scopeNode, apiGeePolicy);
+        addAttributeToContext(condition, policyName, identifier, phaseArray, conditionMappings, phase);
+    }
+
+    private void addAttributeToContext(String condition, String policyName, String identifier, ArrayNode phaseArray, Map<String, String> conditionMappings, String phase) {
+    var phaseObject = createBasePhaseObject(condition, policyName.concat("-Set-Differentiator"), ASSIGN_ATTRIBUTES, phaseArray, conditionMappings);
+    var configurationObject = phaseObject.putObject(CONFIGURATION);
+    configurationObject.put(SCOPE, phase.toUpperCase());
+
+    var attributesArray = configurationObject.putArray(ATTRIBUTES);
+    var attributeNode = attributesArray.addObject();
+    attributeNode.put(NAME, "SpikeArrest.Differentiator");
+    attributeNode.put(VALUE, wrapValueInContextAttributes(identifier));
     }
 
     private void constructRequestConfiguration(ObjectNode requestNode, Document apiGeePolicy) throws XPathExpressionException {
+        // Create configuration
         var configurationNode = requestNode.putObject(CONFIGURATION);
         var async = xPath.evaluate("/SpikeArrest/@async", apiGeePolicy);
 
-        configurationNode.put("async", Boolean.parseBoolean(async));
-        configurationNode.put("addHeaders", true);
+        configurationNode.put(ASYNC, Boolean.parseBoolean(async));
+        configurationNode.put(ADD_HEADERS, true);
         constructRequestRateLimit(configurationNode, apiGeePolicy);
     }
 
     private void constructRequestRateLimit(ObjectNode configurationNode, Document apiGeePolicy) throws XPathExpressionException {
-        var spikeNode = configurationNode.putObject("spike");
+        var spikeNode = configurationNode.putObject(SPIKE);
         var rate = xPath.evaluate("/SpikeArrest/Rate", apiGeePolicy);
 
         var limit = Integer.parseInt(rate.replaceAll("\\D+", "")); // Extract only the numeric part
-        spikeNode.put("limit", limit);
+        spikeNode.put(LIMIT, limit);
 
         var rateString = rate.replaceAll("\\d+", ""); // Extract only the string part
-        spikeNode.put("periodTime", RateLimitIntervalMapper.mapRateToInt(rateString));
-        spikeNode.put("periodTimeUnit", RateLimitIntervalMapper.mapRate(rateString));
+        spikeNode.put(PERIOD_TIME, RateLimitIntervalMapper.mapShorthandRateToInt(rateString));
+        spikeNode.put(PERIOD_TIME_UNIT, RateLimitIntervalMapper.mapShorthandRate(rateString));
 
         var identifierRef = xPath.evaluate("/SpikeArrest/Identifier/@ref", apiGeePolicy);
         if (identifierRef.equals("request.header.Origin")) {
-            spikeNode.put("key", "{#request.headers['origin']}");
+            spikeNode.put(KEY, String.format(REQUEST_HEADER_WRAPPED, "origin"));
         }
     }
 }

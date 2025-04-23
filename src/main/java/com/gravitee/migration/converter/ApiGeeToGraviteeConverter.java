@@ -14,8 +14,8 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Converts APIgee API to Gravitee API.
- * This class is responsible for converting the API configuration from APIgee format to Gravitee format.
+ * Converts Apigee API to Gravitee API.
+ * This class is responsible for converting the API configuration from Apigee format to Gravitee format.
  */
 @Component
 @RequiredArgsConstructor
@@ -28,11 +28,22 @@ public class ApiGeeToGraviteeConverter {
     private final PlanObjectConverter planObjectConverter;
 
 
+    /**
+     * Converts the Apigee API configuration to Gravitee API configuration.
+     *
+     * @param rootXml         The root XML document of the Apigee API.
+     * @param proxyXml        The proxy XML document of the Apigee API.
+     * @param apiGeePolicies  The list of policies associated with the Apigee API.
+     * @param targetEndpoints The list of target endpoints associated with the Apigee API.
+     * @return The Gravitee API configuration as a JSON string.
+     * @throws XPathExpressionException If there is an error evaluating the XPath expression.
+     * @throws IOException              If there is an error writing the JSON output.
+     */
     public String apiGeeToGraviteeConverter(Document rootXml, Document proxyXml, List<Document> apiGeePolicies, List<Document> targetEndpoints) throws XPathExpressionException, IOException {
         var graviteeConfig = objectMapper.createObjectNode();
         var planName = xPath.evaluate("/APIProxy/@name", rootXml);
 
-        apiObjectConverter.mapApiObject(rootXml, proxyXml, graviteeConfig);
+        apiObjectConverter.mapApiObject(rootXml, proxyXml, graviteeConfig, targetEndpoints);
         planObjectConverter.createPlan(graviteeConfig, planName, apiGeePolicies, targetEndpoints, proxyXml);
         documentationObjectConverter.mapDocumentation(graviteeConfig);
 
