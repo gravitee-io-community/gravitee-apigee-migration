@@ -48,7 +48,7 @@ import groovy.json.JsonSlurper
                 // Generate XML
                 def xml = ""
                 if (!config.omitXmlDeclaration) {
-                    xml += "<?xml version=1.0 encoding=UTF-8?>"
+                    xml += "<?xml version='1.0' encoding='UTF-8'?>"
                 }
 
                 // Root element handling

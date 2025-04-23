@@ -1,0 +1,26 @@
+{TargetEndpoint}{targetBasepath} -> {#context.attributes['TargetEndpoint']}{#context.attributes['targetBasepath']}
+{ESBIZTALKIIS.Env}.ES.AFTAPIGEE -> {#context.attributes['ESBIZTALKIIS.Env']}.ES.AFTAPIGEE
+{apiproxy.name} -> {#context.attributes['api']}
+{Product}.{API.Environment} -> {#context.attributes['Product']}.{#context.attributes['API.Environment']}
+{API.TargetEnv} -> {#context.attributes['API.TargetEnv']}
+{API.Environment} -> {#context.attributes['API.Environment']}
+IDCS.{API.Environment}.Apigee.KeySecret -> IDCS.{#context.attributes['API.Environment']}.Apigee.KeySecret
+{Product}.{API.Environment}.{CoolSecurityAccountName}.{CoolSecuritySID} -> {#context.attributes['Product']}.{#context.attributes['API.Environment']}.{#context.attributes['CoolSecurityAccountName']}.{#context.attributes['CoolSecuritySID']}
+{DeveloperApp.Name}.{apiproxy.name} -> {#context.attributes['DeveloperApp.Name']}.{#context.attributes['api']}
+{apiproxy.name}.{pathsuffix} -> {#context.attributes['api']}.{#context.attributes['pathsuffix']}
+{API.TargetEnv}.{CoolSecurityAccountName}.{CoolSecuritySID} -> {#context.attributes['API.TargetEnv']}.{#context.attributes['CoolSecurityAccountName']}.{#context.attributes['CoolSecuritySID']}
+{DeveloperApp.Name}.{apiproxy.name}.{pathsuffix} -> {#context.attributes['DeveloperApp.Name']}.{#context.attributes['api']}.{#context.attributes['pathsuffix']}
+Oracle.IDCS.{API.Environment} -> Oracle.IDCS.{#context.attributes['API.Environment']}
+{replaceAll(proxy.pathsuffix,'/\+/g','.')} -> {#context.attributes['proxy.pathsuffix'].replace('+', '.')}
+{replaceAll(pathsuffix,'/\+/g','.')} -> {#context.attributes['pathsuffix'].replace('+', '.')}
+{replaceAll(API.TargetEnv,ReplaceKey,'')} -> {#context.attributes['API.TargetEnv'].replace(#context.attributes['ReplaceKey'], '')}
+{substring(proxy.pathsuffix,1)} -> {#context.attributes['proxy.pathsuffix'].substring(1)}
+{substring(pathsuffix,1)} -> {#context.attributes['pathsuffix'].substring(1)}
+{jsonPath(CoolSecurityAccountName-JSONPath,jwt.Verify-Cool-Security-JWT.payload-json)} -> {#jsonPath(#context.attributes['jwt.Verify-Cool-Security-JWT.payload-json'], 'CoolSecurityAccountName-JSONPath')}
+{jsonPath(CoolSecuritySID-JSONPath,jwt.Verify-Cool-Security-JWT.payload-json)} -> {#jsonPath(#context.attributes['jwt.Verify-Cool-Security-JWT.payload-json'], 'CoolSecuritySID-JSONPath')}
+{firstnonnull(request.header.Soco-Proxy-API-Key,request.header.Proxy-Authenticate)} -> {#request.headers['Soco-Proxy-API-Key'] != null ? #request.headers['Soco-Proxy-API-Key'] : #request.headers['Proxy-Authenticate']}
+{firstnonnull(request.header.Soco-Proxy-Env,request.header.Proxy-Env, 'Default')} -> {#request.headers['Soco-Proxy-Env'] != null ? #request.headers['Soco-Proxy-Env'] : (#request.headers['Proxy-Env'] != null ? #request.headers['Proxy-Env'] : 'Default')}
+{escapeJSON(SourceRequest.Payload)} -> {#context.attributes['SourceRequest.Payload']}
+{escapeJSON(TargetResponse.Payload)} -> {#context.attributes['TargetResponse.Payload']}
+{escapeJSON(TargetRequest.Payload)} -> {#context.attributes['TargetRequest.Payload']}
+{escapeJSON(SourceResponse.Payload)} -> {#context.attributes['SourceResponse.Payload']}

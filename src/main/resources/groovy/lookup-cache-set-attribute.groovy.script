@@ -1,0 +1,27 @@
+// Define the raw value with a placeholder
+def rawValue = "%s"
+def finalValue = rawValue
+
+// Regex to match all placeholders in the format {#context.attributes['key1']['key2']}
+def matcher = rawValue =~ /\{#context\.attributes\[['"](.+?)['"]\]\[['"](.+?)['"]\]\}/
+
+while (matcher.find()) {
+    // Extract the matched groups directly
+    def attr1 = matcher.group(1)
+    def attr2 = matcher.group(2)
+
+    // Fetch the value from the context using dynamic keys
+    def dynamicPart = context.attributes[attr1]?.get(attr2) ?: ''
+
+    // Replace the placeholder with the dynamic value
+    finalValue = finalValue.replace(matcher.group(0), dynamicPart)
+}
+
+def extractedFromContext = context.attributes[finalValue]
+
+// Only set 'cachehit' to true if the value is not null or empty
+if (extractedFromContext != null && extractedFromContext.toString().trim()) {
+    context.setAttribute('%s.cachehit', true)
+}
+
+context.setAttribute('%s', extractedFromContext)

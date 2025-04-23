@@ -1,0 +1,208 @@
+proxy.pathsuffix !MatchesPath "/chart-of-accounts" -> {#request.pathInfo != '/chart-of-accounts'}
+(request.verb != "OPTIONS") -> {#request.method != "OPTIONS"}
+(SpikeArrest.Differentiator != "APIProxy" and proxy.pathsuffix != "") and (request.verb != "OPTIONS") -> {(#context.attributes['SpikeArrest.Differentiator'] != "APIProxy" && #request.pathInfo != "") && (#request.method != "OPTIONS")}
+(proxy.pathsuffix MatchesPath "/chart-of-accounts") and (request.verb = "POST") -> {#request.pathInfo matches '/chart-of-accounts' && #request.method == "POST"}
+(AllowOrigin.KVM.Value = null or AllowOrigin.KVM.Value = "") -> {#context.attributes['AllowOrigin.KVM.Value'] == null || #context.attributes['AllowOrigin.KVM.Value'] == ""}
+(request.header.Soco-Proxy-API-Key = undefined) and (request.header.Proxy-Authenticate = undefined) -> {#request.headers['Soco-Proxy-API-Key'] == null && #request.headers['Proxy-Authenticate'] == null}
+(messagevalidation.failed  == true) -> {#context.attributes['messagevalidation.failed'] == true}
+request.header.Soco-Proxy-API-Key != undefined -> {#request.headers['Soco-Proxy-API-Key'] != null}
+request.verb == "OPTIONS" AND request.header.origin != null AND request.header.Access-Control-Request-Method != null -> {#request.method == 'OPTIONS'} && {#context.request.headers['origin'] != null} && {#context.request.headers['Access-Control-Request-Method'] != null}
+(DeveloperApp.Name = null or DeveloperApp.Name = "") and (request.verb != "OPTIONS") -> {(#context.attributes['DeveloperApp.Name'] == null || #context.attributes['DeveloperApp.Name'] == '') && #request.method != 'OPTIONS'}
+app.App.Products = "" -> {#context.attributes['app.App.Products'] == ""}
+apiproduct.Product.Proxies = "" -> {#context.attributes['apiproduct.Product.Proxies'] == ""}
+(API.Environment == null) OR (API.Environment == "") -> {#context.attributes['API.Environment'] == null || #context.attributes['API.Environment'] == ""}
+((request.header.Soco-Proxy-API-Key = undefined) and (request.header.Proxy-Authenticate = undefined)) or (request.header.Authorization = undefined) -> {((#request.headers['Soco-Proxy-API-Key'] == null) && (#request.headers['Proxy-Authenticate'] == null)) || #request.headers['Authorization'] == null}
+request.verb == "OPTIONS" AND request.header.origin != null AND request.header.Access-Control-Request-Method != null -> {#request.method == "OPTIONS" && #request.headers['origin'] != null && #request.headers['Access-Control-Request-Method'] != null
+(api-logging != "OFF") -> {#context.attributes['api-logging'] != "OFF"}
+API.Environment = "Default" -> {#context.attributes['API.Environment'] == "Default"}
+(proxy.basepath MatchesPath "/maximospc/fin/v4/invoice") or (proxy.basepath MatchesPath "/maximospc/fin/v4/paymentstatus") or (proxy.basepath MatchesPath "/maximospc/fin/v4/accounts") -> {#request.pathInfo matches '/maximospc/fin/v4/invoice') || (#request.pathInfo matches '/maximospc/fin/v4/paymentstatus') || (#request.pathInfo matches '/maximospc/fin/v4/accounts')}
+((proxy.pathsuffix MatchesPath "/projects") or (proxy.pathsuffix MatchesPath "/tasks" )) -> {((#request.pathInfo matches '/projects') || (#request.pathInfo matches '/tasks'))}
+(proxy.pathsuffix MatchesPath "/chart-of-accounts") and (request.verb = "POST") -> {#request.pathInfo matches '/chart-of-accounts' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/projects") and (request.verb = "POST") -> {#request.pathInfo matches '/projects' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/organizations") and (request.verb = "POST") -> {#request.pathInfo matches '/organizations' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/expenditure-types") and (request.verb = "POST") -> {#request.pathInfo matches '/expenditure-types' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/tasks") and (request.verb = "POST") -> {#request.pathInfo matches '/tasks' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/project-tasks") and (request.verb = "POST") -> {#request.pathInfo matches '/project-tasks' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/poet-combinations") and (request.verb = "POST") -> {#request.pathInfo matches '/poet-combinations' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/ptvalidate") and (request.verb = "POST") -> {#request.pathInfo matches '/ptvalidate' and #request.method == "POST"}
+(api-logging = "DEBUG") and (scope = "SourceResponse") -> {#context.attributes['api-logging'] == "DEBUG" && #context.attributes['api-logging'] == "SourceResponse"}
+(SpikeArrest.Differentiator = "APIProxy" or proxy.pathsuffix = "") and (request.verb != "OPTIONS") -> {(#context.attributes['SpikeArrest.Differentiator'] != "APIProxy" && #request.pathInfo == "") && (#request.method != "OPTIONS")}
+(ServiceCalloutNames != null and ServiceCalloutNames != "") -> {#context.attributes['ServiceCalloutNames'] != null && #context.attributes['ServiceCalloutNames'] != ''}
+scope = "SourceRequest" -> {#context.attributes['scope'] == "SourceRequest"}
+(Product ~ "Oracle.*") -> {#context.attributes['Product'] matches 'Oracle.*'}
+(Product !~ "Oracle.*") -> {#context.attributes['Product'] != 'Oracle.*'}
+(SourceRequest.ContentType ~ "*xml*") -> {#context.attributes['SourceRequest.ContentType'] matches '*xml*'}
+(SourceRequest.ContentType ~ "*json*") -> {#context.attributes['SourceRequest.ContentType'] matches '*json*'}
+responseContentType ~ "*xml*" -> {#context.attributes['responseContentType'] matches '*xml*'}
+((scope ~ "Source*" or scope ~ "Target*") and  contentType ~ "*json*") or (responseContentType ~ "*json*" or requestContentType ~ "*json*") -> {((#context.attributes['scope'] matches 'Source*' || #context.attributes['scope'] matches 'Target*') && #context.attributes['contentType'] matches '*json*') || (#context.attributes['responseContentType'] matches '*json*' || #context.attributes['requestContentType'] matches '*json*')}
+((scope ~ "Source*" or scope ~ "Target*") and (contentType ~ "*xml*")) or (requestContentType ~ "*xml*") -> {((#context.attributes['scope'] matches 'Source*' || #context.attributes['scope'] matches 'Target*') && (#context.attributes['contentType'] matches 'xml*')) || (#context.attributes['requestContentType'] matches 'xml*')}
+(requestPayload.ProjectNumber !JavaRegex "( *?[0-9a-zA-Z] *?){5,}") -> {(#context.attributes['requestPayload.ProjectNumber'] matches '( *?[0-9a-zA-Z] *?){5,}')}
+(AllowOrigin.KVM.Value != null and AllowOrigin.KVM.Value != "") -> {#context.attributes['AllowOrigin.KVM.Value'] != null && #context.attributes['AllowOrigin.KVM.Value'] != ""}
+proxy.pathsuffix MatchesPath "/chart-of-accounts" -> {#request.pathInfo matches '/chart-of-accounts'}
+(request.header.Proxy-Authenticate != undefined) and (request.header.Soco-Proxy-API-Key = undefined) -> {#request.headers['Proxy-Authenticate'] != null && #request.headers['Soco-Proxy-API-Key'] == null}
+(lookupcache.LC-Get-JWKS.cachehit = false) and (jwt.DC-JWT-CoolSecurity-Token.header.cs_env = "NP") -> {#context.attributes['LC-Get-JWKS.cachehit'] == false && #context.attributes['jwt.claims']['cs_env'] == 'NP'}
+(lookupcache.LC-Get-JWKS.cachehit = false) and (jwt.DC-JWT-CoolSecurity-Token.header.cs_env = "PR") -> {#context.attributes['LC-Get-JWKS.cachehit'] == false && #context.attributes['jwt.claims']['cs_env'] == 'PR'}
+lookupcache.LC-Get-JWKS.cachehit = false -> {#context.attributes['LC-Get-JWKS.cachehit'] == false}
+(lookupcache.LC-Get-Oracle-OAuth-Token.cachehit = false) -> {#context.attributes['LC-Get-Oracle-OAuth-Token.cachehit'] == false}
+(lookupcache.LC-Get-Oracle-OAuth-Token.cachehit = false) and ((IDCS.TargetEndpoint = undefined) or (IDCS.ScopeParameter = undefined) or (private.IDCS.BasicAuth = undefined) or (private.IDCS.Username = undefined) or (private.IDCS.Password = undefined)) -> {#context.attributes['LC-Get-Oracle-OAuth-Token.cachehit'] == false && (#context.attributes['IDCS.TargetEndpoint'] == null || #context.attributes['IDCS.ScopeParameter'] == null || #context.attributes['private.IDCS.BasicAuth'] == null || #context.attributes['private.IDCS.Username'] == null || #context.attributes['private.IDCS.Password'] == null)}
+(request.header.Proxy-Authenticate != undefined) and (request.header.Soco-Proxy-API-Key = undefined) -> {#request.headers['Proxy-Authenticate'] != null && #request.headers['Soco-Proxy-API-Key'] == null}
+(proxy.pathsuffix MatchesPath "/api/account/getAccountDetailLight/{accountNumber}") and (request.verb = "GET") -> {#request.pathInfo matches '/api/account/getAccountDetailLight/' + #context.attributes['accountNumber'] && #request.method =="GET"}
+ConsumerKey = undefined -> {#context.attributes['ConsumerKey'] == null}
+(proxy.pathsuffix != "/tokenrequest") and (proxy.pathsuffix != "/TokenRequest") -> {#request.pathInfo != '/tokenrequest' && #request.pathInfo != '/TokenRequest'}
+((proxy.pathsuffix MatchesPath "/tokenrequest") or (proxy.pathsuffix MatchesPath "/TokenRequest")) and (request.verb = "POST") -> {(#request.pathInfo matches '/tokenrequest' || #request.pathInfo matches '/TokenRequest') && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/api/account/{accountId}/emails") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/' + #context.attributes['accountId'] + '/emails' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/contactPhoneNumbers/{accountNumber}/false") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/contactPhoneNumbers/' + #context.attributes['accountNumber'] + '/false' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/isAccountLocked/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/isAccountLocked/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/PmtArrangement/Status/{accountNumber}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/PmtArrangement/Status/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/getPaperlessOptInState/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/getPaperlessOptInState/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/getPaperlessEmailStatus/{accountNumber}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/alertscommunications/getPaperlessEmailStatus/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/EnergyCheckup/isEligibleForPersonalizedCheckup/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/EnergyCheckup/isEligibleForPersonalizedCheckup/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/specialagreements/get/{accountNumber}/{accountType}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/specialagreements/get/' + #context.attributes['accountNumber'] + '/' + #context.attributes['accountType'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/EFT/pendingService/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/EFT/pendingService/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/enrollment/BestOfferDetails/{accoutNumber}/{opCo}/{accountType}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/enrollment/BestOfferDetails/' + #context.attributes['accoutNumber'] + '/' + #context.attributes['opCo'] + '/' + #context.attributes['accountType'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/MyPowerUsage/getMPUBasicAccountInformation/{accountNumber}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/MyPowerUsage/getMPUBasicAccountInformation/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/PayBill/prePay/accountSummary/{opCo}/{accountNumber}/{premiseNo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/PayBill/prePay/accountSummary/' + #context.attributes['opCo'] + '/' + #context.attributes['accountNumber'] + '/' + #context.attributes['premiseNo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/MyPowerUsage/getEstimatedBillIndicators/{accountNumber}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/MyPowerUsage/getEstimatedBillIndicators/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/isSmartNeighborhood/{accountNumber}/{premiseNo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/isSmartNeighborhood/' + #context.attributes['accountNumber'] + '/' + #context.attributes['premiseNo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/enrollment/status/all/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/enrollment/status/all/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/isPaperlessEligible/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/isPaperlessEligible/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/isOneTimePayEligible/{accountId}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/isOneTimePayEligible/' + #context.attributes['accountId'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/profile/getAccountPhoneContacts/{accountNumber}/{customerNo}/{premiseNo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/profile/getAccountPhoneContacts/' + #context.attributes['accountNumber'] + '/' + #context.attributes['customerNo'] + '/' + #context.attributes['premiseNo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/profile/getAccountEmailContacts/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/profile/getAccountEmailContacts/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/profile/getCustomerPIN/{accountId}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/profile/getCustomerPIN/' + #context.attributes['accountId'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/account/validate/customerPin/{accountId}/{pin}/{accountType}/{opco}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/validate/customerPin/' + #context.attributes['accountId'] + '/' + #context.attributes['pin'] + '/' + #context.attributes['accountType'] + '/' + #context.attributes['opco'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/enrollment/status/all/{accountNumber}/options") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/enrollment/status/all/' + #context.attributes['accountNumber'] + '/options' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/getAccountAlerts/{accountId}/{opCo}/{customerNo}/{premiseNo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/alertscommunications/getAccountAlerts/' + #context.attributes['accountId'] + '/' + #context.attributes['opCo'] + '/' + #context.attributes['customerNo'] + '/' + #context.attributes['premiseNo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/MyPowerUsage/MPUData/{accountNumber}/Monthly") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/MyPowerUsage/MPUData/' + #context.attributes['accountNumber'] + '/Monthly' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/MyPowerUsage/MPUData/{accountNumber}/Daily") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/MyPowerUsage/MPUData/' + #context.attributes['accountNumber'] + '/Daily' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/MyPowerUsage/MPUData/{accountNumber}/Hourly") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/MyPowerUsage/MPUData/' + #context.attributes['accountNumber'] + '/Hourly' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/PmtArrangement/SingleLanding/{accountNumber}/{OpCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/PmtArrangement/SingleLanding/' + #context.attributes['accountNumber'] + '/' + #context.attributes['OpCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/saveDemandAlertSubscription") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/alertscommunications/saveDemandAlertSubscription' && #request.method == "POST")}
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/deleteDemandAlertSubscription") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/alertscommunications/deleteDemandAlertSubscription' && #request.method == "POST")}
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/getEnsProgramLog/{ProgramId}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/alertscommunications/getEnsProgramLog/' + #context.attributes['ProgramId'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/MyPowerUsage/MPUData/{accountNumber}/Daily/PrePay") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/MyPowerUsage/MPUData/' + #context.attributes['accountNumber'] + '/Daily/PrePay' && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/pushnotificationmanagement/getPNSubscriptionList/{accountNumber}/{opco}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/pushnotificationmanagement/getPNSubscriptionList/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opco'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/profile/validatePin/{accountNumber}/{pin}/{accountType}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/profile/validatePin/' + #context.attributes['accountNumber'] + '/' + #context.attributes['pin'] + '/' + #context.attributes['accountType'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+(proxy.pathsuffix MatchesPath "/api/billing/getHistory/{accountId}/{opco}/{months}/{start_date}/{end_date}/{createLog}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/billing/getHistory/' + #context.attributes['accountId'] + '/' + #context.attributes['opco'] + '/' + #context.attributes['months'] + '/' + #context.attributes['start_date'] + '/' + #context.attributes['end_date'] + '/' + #context.attributes['createLog'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/Billing/billSummary/{accountNumber}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Billing/billSummary/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/account/isBankAccountUsed/{accountNumber}/{bankAccountNo}/{bankRoutingNo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/isBankAccountUsed/' + #context.attributes['accountNumber'] + '/' + #context.attributes['bankAccountNo'] + '/' + #context.attributes['bankRoutingNo'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/account/bankAccounts/{accountNumber}/{createlog}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/bankAccounts/' + #context.attributes['accountNumber'] + '/' + #context.attributes['createlog'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/EFT/pendingService/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/EFT/pendingService/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/EFT/getEstimatedDraftInfo/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/EFT/getEstimatedDraftInfo/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/EFT/checkEligibility/{accountNumber}/{opCo}/{accountType}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/EFT/checkEligibility/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opCo'] + '/' + #context.attributes['accountType'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/EFT/process") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/EFT/process' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/account/bankAccounts/add") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/account/bankAccounts/add' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/PmtArrangement/SingleLanding/{actPaymentArrangement}/{opCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/PmtArrangement/SingleLanding/' + #context.attributes['actPaymentArrangement'] + '/' + #context.attributes['opCo'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/Billing/getAllBills") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Billing/getAllBills' && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/account/billDelivery/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/billDelivery/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/PayBill/validateBankAccount") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PayBill/validateBankAccount' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/profile/getAccountAddress/{accountNumber}/{customerNumber}/{premiseNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/profile/getAccountAddress/' + #context.attributes['accountNumber'] + '/' + #context.attributes['customerNumber'] + '/' + #context.attributes['premiseNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/PmtArrangement/Enroll") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PmtArrangement/Enroll' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/profile/saveMailingAddress") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/profile/saveMailingAddress' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/account/ValidateAddress") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/account/ValidateAddress' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/account/bankAccounts/process") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/account/bankAccounts/process' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/account/paymentMethods/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/account/paymentMethods/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/saveBillDelivery") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/alertscommunications/saveBillDelivery' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/PayBill/submitMultiPayment") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PayBill/submitMultiPayment' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/PayBill/submitPayment") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PayBill/submitPayment' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/alertscommunications/getBillingAlertsEnrollmentStatus/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/alertscommunications/getBillingAlertsEnrollmentStatus/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/Bills/BillImage/{EvoEncryptedAccountNumber}/{billDate}/{opCo}/{acctType}/{traceId}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Bills/BillImage/' + #context.attributes['EvoEncryptedAccountNumber'] + '/' + #context.attributes['billDate'] + '/' + #context.attributes['opCo'] + '/' + #context.attributes['acctType'] + '/' + #context.attributes['traceId'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/Redirect/CreditCard/{opCo}/{accountNo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Redirect/CreditCard/' + #context.attributes['opCo'] + '/' + #context.attributes['accountNo'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/PayBill/submitCityBasePayment") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PayBill/submitCityBasePayment' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/Redirect/DebitCard/{opCo}/{accountNumber}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Redirect/DebitCard/' + #context.attributes['opCo'] + '/' + #context.attributes['accountNumber'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/Billing/getActivityStatement/{accountNumber}/{OpCo}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Billing/getActivityStatement/' + #context.attributes['accountNumber'] + '/' + #context.attributes['OpCo'] && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/Billing/servicePeriods") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Billing/servicePeriods' && #request.method == "GET")}
+
+(proxy.pathsuffix MatchesPath "/api/PmtArrangement/EditReminders") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PmtArrangement/EditReminders' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/PmtArrangement/Declined") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/PmtArrangement/Declined' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/DigitalWallet/submitPayment") and (request.verb = "POST") -> {(#request.pathInfo matches '/api/DigitalWallet/submitPayment' && #request.method == "POST")}
+
+(proxy.pathsuffix MatchesPath "/api/Billing/getPrepayHistory/{accountNumber}/{OpCo}/{startDate}/{endDate}") and (request.verb = "GET") -> {(#request.pathInfo matches '/api/Billing/getPrepayHistory/' + #context.attributes['accountNumber'] + '/' + #context.attributes['OpCo'] + '/' + #context.attributes['startDate'] + '/' + #context.attributes['endDate'] &&
+(proxy.pathsuffix MatchesPath "/api/outages/getOutgeAlerts") OR (proxy.pathsuffix MatchesPath "/api/account/accountType") -> {#request.pathInfo matches '/api/outages/getOutgeAlerts' || #request.pathInfo matches '/api/account/accountType'}
+(proxy.pathsuffix Equals "/api/outages/reportLightingOutage") OR (proxy.pathsuffix Equals "/api/outages/reportElectricOutage") OR (proxy.pathsuffix MatchesPath "/api/outages/outageStatusV2") OR (proxy.pathsuffix Equals "/api/account/AccountSearch") OR (proxy.pathsuffix Equals "/api/account/AddressSearch") OR (proxy.pathsuffix MatchesPath "/api/account/GetAccountsByMeterNum/{meterNumber}") OR (proxy.pathsuffix Equals "/api/outages/reportStreetLightOutage") -> {#request.pathInfo matches '/api/outages/reportLightingOutage' || #request.pathInfo matches '/api/outages/reportElectricOutage' || #request.pathInfo matches '/api/outages/outageStatusV2' || #request.pathInfo matches '/api/account/AccountSearch' || #request.pathInfo matches '/api/account/AddressSearch' || #request.pathInfo matches '/api/account/GetAccountsByMeterNum/{meterNumber}' || #request.pathInfo matches '/api/outages/reportStreetLightOutage'}
+(proxy.pathsuffix MatchesPath "/api/outages/outageStatusV2") and (request.verb = "GET") -> {#request.pathInfo matches '/api/outages/outageStatusV2' && #request.method == "GET"}
+(proxy.pathsuffix MatchesPath "/api/outages/getOutgeAlerts") and (request.verb = "GET") -> {#request.pathInfo matches '/api/outages/getOutgeAlerts' && #request.method == "GET"}
+(proxy.pathsuffix MatchesPath "/api/outages/reportElectricOutage") and (request.verb = "POST") -> {#request.pathInfo matches '/api/outages/reportElectricOutage' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/api/outages/reportLightingOutage") and (request.verb = "POST") -> {#request.pathInfo matches '/api/outages/reportLightingOutage' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/api/account/AccountSearch") and (request.verb = "POST") -> {#request.pathInfo matches '/api/account/AccountSearch' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/api/account/AddressSearch") and (request.verb = "POST") -> {#request.pathInfo matches '/api/account/AddressSearch' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/api/account/GetAccountsByMeterNum/{meterNumber}") and (request.verb = "GET") -> {#request.pathInfo matches '/api/account/GetAccountsByMeterNum/' + #context.attributes['accountNumber'] && #request.method == "GET"}
+(proxy.pathsuffix MatchesPath "/api/account/accountType") and (request.verb = "GET") -> {#request.pathInfo matches '/api/account/accountType' && #request.method == "GET"}
+(proxy.pathsuffix MatchesPath "/api/outages/reportStreetLightOutage") and (request.verb = "POST") -> {#request.pathInfo matches '/api/outages/reportStreetLightOutage' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/api/SystemMessage/{messageType}") and (request.verb = "GET") -> #request.pathInfo matches '/api/SystemMessage/' + #context.attributes['messageType'] && #request.method == "GET"
+(proxy.pathsuffix MatchesPath "/api/NewsLetter/PastIssues/{OpCo}/{accountType}") and (request.verb = "GET") -> #request.pathInfo matches '/api/NewsLetter/PastIssues/' + #context.attributes['OpCo'] + '/' + #context.attributes['accountType'] && #request.method == "GET"
+(proxy.pathsuffix MatchesPath "/api/NewsLetter/File/{fileNo}") and (request.verb = "GET") -> #request.pathInfo matches '/api/NewsLetter/File/' + #context.attributes['fileNo'] && #request.method == "GET"
+(proxy.pathsuffix MatchesPath "/api/faqtopics/all/{opcoCode}") and (request.verb = "GET") -> #request.pathInfo matches '/api/faqtopics/all/' + #context.attributes['opcoCode'] && #request.method == "GET"
+(proxy.pathsuffix MatchesPath "/api/LettersForms/getLetter/{letterType}/{accountNumber}/{opco}") and (request.verb = "GET") -> {#request.pathInfo matches '/api/LettersForms/getLetter/' + #context.attributes['letterType'] + '/' + #context.attributes['accountNumber'] + '/' + #context.attributes['opco'] && #request.method == "GET"}
+(proxy.pathsuffix MatchesPath "/api/BannerMessage/GetBannerMessages/{accountNumber}/{pageID}") and (request.verb = "GET") -> {#request.pathInfo matches '/api/BannerMessage/GetBannerMessages/' + #context.attributes['accountNumber'] + '/' + #context.attributes['pageID'] && #request.method == "GET"}
+(SourceRequest.ContentType ~ "*json*") -> {#context.attributes['SourceRequest.ContentType'] matches '*json*'}
+(SourceRequest.ContentType ~ "*xml*") -> {#context.attributes['SourceRequest.ContentType'] matches '*xml*'}
+(SourceRequest.ContentType ~ "*xml*") -> {#context.attributes['SourceRequest.ContentType'] matches '*xml*'}
+(proxy.pathsuffix ! MatchesPath "/update**transactioncontrol") and (request.verb != "OPTIONS") -> {#request.pathInfo != '/update**transactioncontrol' && #request.method != 'OPTIONS'}
+(proxy.pathsuffix MatchesPath "/update**transactioncontrol") and (request.verb = "POST") -> {#request.pathInfo matches '/update**transactioncontrol' && #request.method == "POST"}
+(SourceRequest.ContentType ~ "*xml*") -> {#context.attributes['SourceRequest.ContentType'] matches '*xml*'}
+(requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "") -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == ''}
+(projectDetailsPayload.projectCount == 0) -> {#context.attributes['projectDetailsPayload.projectCount'] == 0}
+(SourceRequest.ContentType ~ "*json*") -> {#context.attributes['SourceRequest.ContentType'] matches '*json*'}
+(SourceRequest.ContentType ~ "*xml*") -> {#context.attributes['SourceRequest.ContentType'] matches '*xml*'}
+(proxy.pathsuffix MatchesPath "/validate**subtask") and (request.verb != "OPTIONS") -> {#request.pathInfo matches '/validate**subtask' && #request.method != 'OPTIONS'}
+(requestPayload.ProjectNumber == null) OR (requestPayload.ProjectNumber == "") -> {#context.attributes['requestPayload.ProjectNumber'] == null || #context.attributes['requestPayload.ProjectNumber'] == ''}
+((requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "")) -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == ''}
+((requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "") -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == ''}
+((requestPayload.ProjectNumber == null) OR (requestPayload.ProjectNumber == "")) -> {#context.attributes['requestPayload.ProjectNumber'] == null || #context.attributes['requestPayload.ProjectNumber'] == ''}
+((requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "")) -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == ''}
+(requestPayload.ProjectNumber == null) OR (requestPayload.ProjectNumber == "") -> {#context.attributes['requestPayload.ProjectNumber'] == null || #context.attributes['requestPayload.ProjectNumber'] == ''}
+((requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "")) and (projectDetailsPayload.projectCount = 0) -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == '' && #context.attributes['projectDetailsPayload.projectCount'] == 0}
+(taskDFFDetails.taskCount = 0) -> {#context.attributes['taskDFFDetails.taskCount'] == 0}
+(taskAccountDetails.taskCount = 0) -> {#context.attributes['taskAccountDetails.taskCount'] == 0}
+(proxy.pathsuffix MatchesPath "/create**subtask") and (request.verb = "POST") and (request.verb != "OPTIONS") -> {#request.pathInfo matches '/create**subtask' && #request.method == "POST" && #request.method != 'OPTIONS'}
+(requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "") -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == ''}
+((requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "")) and (projectDetailsPayload.projectCount = 0) -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == '' && #context.attributes['projectDetailsPayload.projectCount'] == 0}
+(requestPayload.TasksUniqId == null) OR (requestPayload.TasksUniqId == "") -> {#context.attributes['requestPayload.TasksUniqId'] == null || #context.attributes['requestPayload.TasksUniqId'] == ''}
+((requestPayload.TasksUniqId == null) OR (requestPayload.TasksUniqId == "")) and (taskDetailsPayload.taskCount = 0) -> {#context.attributes['requestPayload.TasksUniqId'] == null || #context.attributes['requestPayload.TasksUniqId'] == '' && #context.attributes['taskDetailsPayload.taskCount'] == 0}
+(requestPayload.TasksUniqId == null) OR (requestPayload.TasksUniqId == "") -> {#context.attributes['requestPayload.TasksUniqId'] == null || #context.attributes['requestPayload.TasksUniqId'] == ''}
+(proxy.pathsuffix MatchesPath "/update**taskfinishdate") and ((request.verb = "POST") or (request.verb = "PATCH")) and (request.verb != "OPTIONS") -> {#request.pathInfo matches '/update**taskfinishdate' && (#request.method == "POST" || #request.method == "PATCH") && #request.method != 'OPTIONS'}
+(Txn-Control-OIC-Response.Status = "ERROR") -> {#context.attributes['Txn-Control-OIC-Response.Status'] == 'ERROR'}
+(proxy.pathsuffix MatchesPath "/update**transactioncontrol") and (request.verb = "POST") and (request.verb != "OPTIONS") -> {#request.pathInfo matches '/update**transactioncontrol' && #request.method == "POST" && #request.method != 'OPTIONS'}
+(requestPayload.ProjectId == null) OR (requestPayload.ProjectId == "") -> {#context.attributes['requestPayload.ProjectId'] == null || #context.attributes['requestPayload.ProjectId'] == ''}
+(proxy.pathsuffix MatchesPath "/update**taskname") and ((request.verb = "POST") or (request.verb = "PATCH")) and (request.verb != "OPTIONS") -> {#request.pathInfo matches '/update**taskname' && (#request.method == "POST" || #request.method == "PATCH") && #request.method != 'OPTIONS'}
+request.verb == "OPTIONS" AND request.header.origin != null AND request.header.Access-Control-Request-Method != null -> {#request.method == 'OPTIONS' && #request.headers['origin'] != null && #request.headers['Access-Control-Request-Method'] != null}
+(proxy.pathsuffix MatchesPath "/validate**subtask") and (request.verb = "POST") -> {#request.pathInfo matches '/validate**subtask' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/create**subtask") and (request.verb = "POST") -> {#request.pathInfo matches '/create**subtask' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/update**taskfinishdate") and (request.verb = "POST") -> {#request.pathInfo matches '/update**taskfinishdate' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/update**taskname") and (request.verb = "POST") -> {#request.pathInfo matches '/update**taskname' && #request.method == "POST"}
+(proxy.pathsuffix MatchesPath "/update**transactioncontrol") and (request.verb = "POST") -> {#request.pathInfo matches '/update**transactioncontrol' && #request.method == "POST"}
+((requestPayload.Voltage == null) OR (requestPayload.Voltage == "")) AND ((taskAccountDetails.product == "") OR (taskAccountDetails.product == null)) -> {#context.attributes['requestPayload.Voltage'] == null || #context.attributes['requestPayload.Voltage'] == '' && (#context.attributes['taskAccountDetails.product'] == null || #context.attributes['taskAccountDetails.product'] == '')}
+((requestPayload.Voltage == null) OR (requestPayload.Voltage == "")) AND ((taskAccountDetails.product != "") AND (taskAccountDetails.product != null)) -> {#context.attributes['requestPayload.Voltage'] == null || #context.attributes['requestPayload.Voltage'] == '' && (#context.attributes['taskAccountDetails.product'] != null || #context.attributes['taskAccountDetails.product'] != '')}
+((requestPayload.Voltage != null) and (requestPayload.Voltage != "")) AND ((taskAccountDetails.product == "") OR (taskAccountDetails.product == null)) -> {#context.attributes['requestPayload.Voltage'] != null || #context.attributes['requestPayload.Voltage'] != '' && (#context.attributes['taskAccountDetails.product'] == null || #context.attributes['taskAccountDetails.product'] == '')}
+((requestPayload.Voltage != null) and (requestPayload.Voltage != "")) AND ((taskAccountDetails.product != "") AND (taskAccountDetails.product != null)) -> {#context.attributes['requestPayload.Voltage'] != null || #context.attributes['requestPayload.Voltage'] != '' && (#context.attributes['taskAccountDetails.product'] != null || #context.attributes['taskAccountDetails.product'] != '')}
