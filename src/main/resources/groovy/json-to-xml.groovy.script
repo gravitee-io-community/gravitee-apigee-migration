@@ -1,6 +1,7 @@
 import groovy.json.JsonSlurper
 
             // Configurable parameters matching Apigee defaults
+            var textNodeName = "%s"
             def config = [
                 nullValue: "%s",
                 rootName: "%s",
@@ -8,7 +9,6 @@ import groovy.json.JsonSlurper
                 arrayItemName: "%s",
                 attributePrefix: "%s",
                 attributeBlock: "%s",
-                textNodeName: "%s",
                 namespaceBlock: "%s",
                 defaultNamespaceNode: "\%s",
                 namespaceSeparator: "%s",
@@ -17,17 +17,29 @@ import groovy.json.JsonSlurper
                 indent: false
             ]
 
+            if (textNodeName != null && textNodeName != "") {
+                                config['textNodeName'] = textNodeName
+                            }
+
             try {
                 def scope = %s;
                 def jsonContent = scope.content?.trim()
                 if (!jsonContent) {
-                    return false
+                    result.state = State.FAILURE
+                                        result.code = 400
+                                        result.error = '{"error": "Payload is not JSON"}'
+                                        result.contentType = 'application/json'
+                                        return result.error
                 }
 
                 // Check Content-Type - Apigee requires application/json
                 def contentType = scope.headers.get("Content-Type")?.getAt(0)?.toLowerCase()
                 if (!contentType?.contains("application/json")) {
-                    return false
+                    result.state = State.FAILURE
+                                        result.code = 400
+                                        result.error = '{"error": "Content-Type must be application/json"}'
+                                        result.contentType = 'application/json'
+                                        return result.error
                 }
 
                 // Parse JSON
@@ -113,7 +125,11 @@ import groovy.json.JsonSlurper
                 return xml
 
             } catch (Exception e) {
-                return false
+                result.state = State.FAILURE
+                                    result.code = 400
+                                    result.error = '{"error": "Error converting JSON to XML"}'
+                                    result.contentType = 'application/json'
+                                    return result.error
             }
 
             def buildNamespaceAttributes(namespaces, config) {

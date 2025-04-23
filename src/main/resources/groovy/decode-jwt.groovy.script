@@ -1,0 +1,31 @@
+import groovy.json.JsonSlurper
+
+// Extract Authorization header
+def scope = %s
+def authHeader = scope.headers['Authorization']?.getAt(0)
+def token = authHeader?.replace("Bearer ", "")
+
+if (token) {
+    // Split the JWT into header, payload
+    def parts = token.split("\\.")
+    if (parts.length == 3) {
+        def headerEncoded = parts[0]
+        def payloadEncoded = parts[1]
+
+        // Decode the header and payload
+        def headerDecoded = new String(headerEncoded.decodeBase64())
+        def payloadDecoded = new String(payloadEncoded.decodeBase64())
+
+        // Parse the header and payload into maps
+        def header = new JsonSlurper().parseText(headerDecoded)
+        def claims = new JsonSlurper().parseText(payloadDecoded)
+
+        // Combine both the header and claims into one map
+        def jwtData = [:]
+        jwtData.putAll(header)
+        jwtData.putAll(claims)
+
+        // Store the combined JWT data in the context
+        context.attributes['jwt.claims'] = jwtData
+    }
+}
