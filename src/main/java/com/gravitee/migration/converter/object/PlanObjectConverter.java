@@ -4,9 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.gravitee.migration.converter.factory.PolicyConverter;
+import com.gravitee.migration.enums.SignatureEnum;
 import com.gravitee.migration.infrastructure.configuration.GraviteeELTranslator;
 import com.gravitee.migration.service.filereader.FileReaderService;
+import com.gravitee.migration.util.policy.PolicyMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,14 +19,17 @@ import org.w3c.dom.NodeList;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.constructCondition;
 import static com.gravitee.migration.util.StringUtils.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.DYNAMIC_ROUTING;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.DYNAMIC_ROUTING;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.JWT;
 
 /**
  * This class is responsible for creating the plan array in the Gravitee JSON file
@@ -44,8 +48,8 @@ public class PlanObjectConverter {
     private String dictionaryName;
 
     private static final String ROUTING_POLICY_PATTERN = ".*";
-    private final List<PolicyConverter> policyConverters;
-    private final Set<String> collectedPolicies = new HashSet<>();
+    private final PolicyMapperUtil policyMapperUtil;
+    private final ApiObjectConverter apiObjectConverter;
 
     /**
      * Creates a plan node in the Gravitee API configuration.
@@ -57,7 +61,6 @@ public class PlanObjectConverter {
      * @param proxyXml        The proxy XML document.
      */
     public void createPlan(ObjectNode graviteeNode, String planName, List<Document> apiGeePolicies, List<Document> targetEndpoints, Document proxyXml) throws XPathExpressionException, JsonProcessingException {
-        graviteeELTranslator.loadConditionMappings();
 
         var plansArray = graviteeNode.putArray(PLANS);
         // We are creating plans based on what type of policies are used in the API (JWT, API Key, etc.)
@@ -69,8 +72,9 @@ public class PlanObjectConverter {
         // Map flows from the proxy XML located in the proxies folder
         buildFlowsFromProxyXml(apiGeePolicies, proxyXml, targetEndpoints, flowsArray);
         buildPlansSecurity(planNode, plansArray, planName);
-
+        processCachePolicies();
     }
+
 
     private void buildFlowsFromProxyXml(List<Document> apiGeePolicies, Document proxyXml, List<Document> targetEndpoints, ArrayNode flowsArray) throws XPathExpressionException {
         // Add PreFlow Request steps to the request array
@@ -131,7 +135,7 @@ public class PlanObjectConverter {
             // Process the steps inside the flow and map them to the corresponding policies
             for (int i = 0; i < steps.getLength(); i++) {
                 var stepNode = steps.item(i);
-                findAndApplyMatchingPolicy(stepNode, apiGeePolicies, scopeArray, phase);
+                policyMapperUtil.findAndApplyMatchingPolicy(stepNode, apiGeePolicies, scopeArray, phase, false);
             }
         }
     }
@@ -149,58 +153,6 @@ public class PlanObjectConverter {
         constructCondition(flowCondition, selectorsObject, graviteeELTranslator.getConditionMappings(), selectors);
 
         return flowNode;
-    }
-
-    private void findAndApplyMatchingPolicy(Node stepNode, List<Document> apiGeePolicies, ArrayNode phaseArray, String phase) throws XPathExpressionException {
-        // Extract the policy name from the step node
-        var stepName = xPath.evaluate("Name", stepNode);
-
-        for (Document apiGeePolicy : apiGeePolicies) {
-            // Extract the display name of the policy
-            var displayName = xPath.evaluate("/*/@name", apiGeePolicy);
-            // Check if the step name matches the display name of the policy
-            if (stepName.equals(displayName)) {
-                applyPolicyConverter(stepNode, apiGeePolicy, phaseArray, phase);
-            }
-        }
-    }
-
-    private void applyPolicyConverter(Node stepNode, Document apiGeePolicy, ArrayNode phaseArray, String phase) throws XPathExpressionException {
-        // Extract the root element name of the policy
-        var rootElement = (Node) xPath.evaluate("/*", apiGeePolicy, XPathConstants.NODE);
-        var policyType = rootElement.getNodeName();
-
-        String condition = xPath.evaluate("Condition", stepNode);
-
-        // Collect policies if they are VerifyJWT or ApiKey
-        if (VERIFY_JWT.equals(policyType) || VERIFY_API_KEY.equals(policyType)) {
-            collectedPolicies.add(policyType);
-        }
-
-        applyConverter(policyType, condition, apiGeePolicy, phaseArray, phase);
-    }
-
-    private void applyConverter(String policyType, String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase) {
-        try {
-            // Find the converter that supports the given policy type
-            var converter = getConverter(policyType);
-
-            // Map that contains the condition mappings from apiGee to Gravitee
-            Map<String, String> conditionMappings = graviteeELTranslator.getConditionMappings();
-
-            // Convert the policy using the found converter
-            converter.convert(condition, apiGeePolicy, phaseArray, phase, conditionMappings);
-        } catch (Exception e) {
-            // Log the error if the converter fails
-            log.warn(e.getMessage());
-        }
-    }
-
-    private PolicyConverter getConverter(String policyType) {
-        return policyConverters.stream()
-                .filter(converter -> converter.supports(policyType))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No converter found for policy type: " + policyType));
     }
 
     private void buildRouteRules(List<Document> apiGeePolicies, Document proxyXml, List<Document> targetEndpoints, ArrayNode flowsArray) throws XPathExpressionException {
@@ -273,17 +225,7 @@ public class PlanObjectConverter {
 
     private void processFlowNodes(String xpathExpression, Document targetEndpoint, List<Document> apiGeePolicies, ArrayNode phaseArray, String phase) throws XPathExpressionException {
         NodeList flowNodes = (NodeList) xPath.evaluate(xpathExpression, targetEndpoint, XPathConstants.NODESET);
-        applyPoliciesToFlowNodes(flowNodes, apiGeePolicies, phaseArray, phase);
-    }
-
-    public void applyPoliciesToFlowNodes(NodeList stepNodes, List<Document> apiGeePolicies, ArrayNode objectNodes, String scope) throws XPathExpressionException {
-        if (stepNodes != null && stepNodes.getLength() > 0) {
-
-            for (int j = 0; j < stepNodes.getLength(); j++) {
-                var stepNode = stepNodes.item(j);
-                findAndApplyMatchingPolicy(stepNode, apiGeePolicies, objectNodes, scope);
-            }
-        }
+        policyMapperUtil.applyPoliciesToFlowNodes(flowNodes, apiGeePolicies, phaseArray, phase, false);
     }
 
     private void buildRoutingPolicy(Document targetEndpoint, ArrayNode requestArray) throws XPathExpressionException {
@@ -300,7 +242,12 @@ public class PlanObjectConverter {
         var ruleObject = rulesArray.addObject();
         ruleObject.put(PATTERN, ROUTING_POLICY_PATTERN);
 
+        setRoutingPolicyUrl(ruleObject, targetEndpoint);
+    }
+
+    private void setRoutingPolicyUrl(ObjectNode ruleObject, Document targetEndpoint) throws XPathExpressionException {
         var targetEndpointUrl = xPath.evaluate("/TargetEndpoint/HTTPTargetConnection/URL", targetEndpoint);
+
         if (isNotNullOrEmpty(targetEndpointUrl)) {
             var targetUrl = constructEndpointsUrl(targetEndpointUrl, dictionaryName);
             ruleObject.put(URL, targetUrl);
@@ -318,7 +265,7 @@ public class PlanObjectConverter {
         plansNode.put(DEFINITION_VERSION, V4);
         plansNode.put(ID, UUID.randomUUID().toString());
         plansNode.put(DESCRIPTION, planName.concat("-plan"));
-        plansNode.put(STATUS, PUBLISHED);
+        plansNode.put(STATUS, STAGING);
         plansNode.put(VALIDATION, MANUAL);
 
         // Name extracted from the API name
@@ -328,6 +275,7 @@ public class PlanObjectConverter {
     }
 
     private void buildPlansSecurity(ObjectNode plansNode, ArrayNode plansArray, String planName) throws JsonProcessingException {
+        Set<String> collectedPolicies = policyMapperUtil.getCollectedPolicies();
 
         if (collectedPolicies.isEmpty()) {
             buildKeylessPlan(plansNode);
@@ -342,9 +290,9 @@ public class PlanObjectConverter {
     }
 
     private void buildApiKeyPlan(ObjectNode plansObject, String planName) {
-        plansObject.put(NAME, planName.concat("_API_KEY"));
+        plansObject.put(NAME, planName.concat("_").concat(API_KEY));
         var securityNode = plansObject.putObject(SECURITY);
-        securityNode.put(TYPE, "API_KEY");
+        securityNode.put(TYPE, API_KEY);
         securityNode.putObject(CONFIGURATION);
     }
 
@@ -358,59 +306,67 @@ public class PlanObjectConverter {
         ObjectMapper objectMapper = new ObjectMapper();
         var jwtPlan = objectMapper.readValue(plansNode.toString(), ObjectNode.class);
         jwtPlan.put(ID, UUID.randomUUID().toString());
-        jwtPlan.put(NAME, planName.concat("_JWT"));
+        jwtPlan.put(NAME, planName.concat("_").concat(JWT.toUpperCase()));
 
         plansArray.add(jwtPlan);
 
         var securityNode = jwtPlan.putObject(SECURITY);
-        securityNode.put(TYPE, "JWT");
+        securityNode.put(TYPE, JWT.toUpperCase());
 
         configureJwtPlan(securityNode.putObject(CONFIGURATION));
     }
 
     private void buildJwtPlan(ObjectNode plansObject, String planName) {
-        plansObject.put(NAME, planName.concat("_JWT"));
+        plansObject.put(NAME, planName.concat("_").concat(JWT.toUpperCase()));
         var securityNode = plansObject.putObject(SECURITY);
-        securityNode.put(TYPE, "JWT");
+        securityNode.put(TYPE, JWT.toUpperCase());
 
         configureJwtPlan(securityNode.putObject(CONFIGURATION));
     }
 
     private void configureJwtPlan(ObjectNode configurationObject) {
         configureBasicJwtSettings(configurationObject);
-        configureConfirmationMethodValidation(configurationObject.putObject("confirmationMethodValidation"));
-        configureTokenTypeValidation(configurationObject.putObject("tokenTypValidation"));
+        configureConfirmationMethodValidation(configurationObject.putObject(CONFIRMATION_METHOD_VALIDATION));
+        configureTokenTypeValidation(configurationObject.putObject(TOKEN_TYP_VALIDATION));
     }
 
     private void configureBasicJwtSettings(ObjectNode configurationObject) {
-        configurationObject.put("signature", "RSA_RS256");
-        configurationObject.put("publicKeyResolver", "GIVEN_KEY");
-        configurationObject.put("connectTimeout", 2000);
-        configurationObject.put("requestTimeout", 2000);
-        configurationObject.put("followRedirects", false);
-        configurationObject.put("useSystemProxy", false);
-        configurationObject.put("extractClaims", false);
-        configurationObject.put("propagateAuthHeader", true);
-        configurationObject.put("userClaim", "sub");
+        configurationObject.put(SIGNATURE, SignatureEnum.RS256.getValue());
+        configurationObject.put(PUBLIC_KEY_RESOLVER, GIVEN_KEY);
+        configurationObject.put(CONNECT_TIMEOUT, 2000);
+        configurationObject.put(REQUEST_TIMEOUT, 2000);
+        configurationObject.put(FOLLOW_REDIRECTS, false);
+        configurationObject.put(USE_SYSTEM_PROXY, false);
+        configurationObject.put(EXTRACT_CLAIMS, false);
+        configurationObject.put(PROPAGATE_AUTH_HEADER, true);
+        configurationObject.put(USER_CLAIM, SUB);
     }
 
     private void configureConfirmationMethodValidation(ObjectNode confirmationMethodValidation) {
-        confirmationMethodValidation.put("ignoreMissing", false);
+        confirmationMethodValidation.put(IGNORE_MISSING, false);
 
-        var certificateBoundThumbprint = confirmationMethodValidation.putObject("certificateBoundThumbprint");
-        certificateBoundThumbprint.put("enabled", false);
-        certificateBoundThumbprint.put("extractCertificateFromHeader", false);
-        certificateBoundThumbprint.put("headerName", "ssl-client-cert");
+        var certificateBoundThumbprint = confirmationMethodValidation.putObject(CERTIFICATE_BOUND_THUMBPRINT);
+        certificateBoundThumbprint.put(ENABLED, false);
+        certificateBoundThumbprint.put(EXTRACT_CERTIFICATE_FROM_HEADER, false);
+        certificateBoundThumbprint.put(HEADER_NAME, SSL_CLIENT_CERT);
     }
 
     private void configureTokenTypeValidation(ObjectNode tokenTypValidation) {
-        tokenTypValidation.put("enabled", false);
-        tokenTypValidation.put("ignoreMissing", false);
+        tokenTypValidation.put(ENABLED, false);
+        tokenTypValidation.put(IGNORE_MISSING, false);
 
-        var expectedValues = tokenTypValidation.putArray("expectedValues");
-        expectedValues.add("JWT");
+        var expectedValues = tokenTypValidation.putArray(EXPECTED_VALUES);
+        expectedValues.add(JWT.toUpperCase());
 
-        tokenTypValidation.put("ignoreCase", false);
+        tokenTypValidation.put(IGNORE_CASE, false);
+    }
+
+    private void processCachePolicies() throws XPathExpressionException {
+        var documents = policyMapperUtil.getCachePolicies();
+
+        for (var policy : documents) {
+            apiObjectConverter.buildResources(policy);
+        }
     }
 
 }

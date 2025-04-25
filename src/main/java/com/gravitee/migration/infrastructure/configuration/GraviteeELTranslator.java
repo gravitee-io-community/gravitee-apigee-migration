@@ -7,6 +7,10 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/*
+ * This class is responsible for loading and translating Gravitee EL expressions
+ * This is a template solution to handle the translation of Apigee policies to Gravitee policies. (hardcoded translations from the map)
+ */
 @Configuration
 public class GraviteeELTranslator {
 
@@ -55,5 +59,4 @@ public class GraviteeELTranslator {
             throw new RuntimeException("Error loading mappings from resource: " + filePath, e);
         }
     }
-
 }
