@@ -28,7 +28,7 @@ mvn clean packgage
 Migration/  -- this can be any name
 ├── ApiProxy/  -- this is the folder of the APIProxy that we are migrating
 │   └── apiproxy
-└── SharedFlows/  -- this is the folder of the SharedFlows that we are migrating (needs to be SharedFlows), it should contain all the sharedflows used in the APIProxy
+└── SharedFlows/  -- this is the folder of the SharedFlows that we are migrating (needs to be SharedFlows), it should contain all the sharedflows used in the APIProxy (it must contain only shared flows inside of it)
     ├── SharedFlow1/
     │   └── sharedflowbundle
     ├── SharedFlow2/
