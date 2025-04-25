@@ -1,0 +1,147 @@
+import groovy.json.JsonOutput
+import groovy.xml.XmlSlurper
+import io.gravitee.policy.groovy.PolicyResult.State
+
+try {
+	def scope = %s
+		def xmlContent = scope.content?.trim()
+
+    if (!xmlContent) {
+        result.state = State.FAILURE
+        result.code = 400
+        result.error = '{"error": "No XML content provided"}'
+        result.contentType = 'application/json'
+        return result.error
+    }
+
+    def contentType = scope.headers['Content-Type']?.getAt(0)?.toLowerCase()
+    if (!contentType?.contains('application/xml')) {
+        result.state = State.FAILURE
+        result.code = 400
+        result.error = '{"error": "Content-Type must be application/xml"}'
+        result.contentType = 'application/json'
+        return result.error
+    }
+
+    def xml
+    try {
+        xml = new XmlSlurper().parseText(xmlContent)
+    } catch (Exception e) {
+        result.state = State.FAILURE
+        result.code = 400
+        result.error = "{\"error\": \"Invalid XML: ${e.getMessage()?.replaceAll('\"', '\\\\')}\"}"
+        result.contentType = 'application/json'
+        return result.error
+    }
+
+    def nullValueInput = %s
+                def config = [
+                    recognizeNumber: %s,
+                    recognizeBoolean: %s,
+                    recognizeNull: %s,
+                    stripLevels: %s,
+                    treatAsArray: %s
+                ]
+
+    if (nullValueInput != null && nullValueInput != "") {
+        config['nullValue'] = nullValueInput
+    }
+
+    // Fixed: renamed result to jsonResult to avoid conflict
+    def jsonResult = [:]
+    def stack = [[node: xml, path: "", parentMap: jsonResult, parentName: null]]
+
+    while (stack) {
+        def current = stack.pop()
+        def node = current.node
+        def currentPath = current.path
+        def parentMap = current.parentMap
+        def parentName = current.parentName
+
+        if (!(node instanceof groovy.xml.slurpersupport.GPathResult)) {
+            continue
+        }
+
+        def nodeName = node.name()
+        def newPath = currentPath ? "${currentPath}/${nodeName}" : nodeName
+        def children = node.children()
+        def text = node.text().trim()
+
+        def nodeValue
+
+        if (children.size() == 0) {
+            if (text) {
+                if (config.recognizeBoolean && text.equalsIgnoreCase('true')) {
+                    nodeValue = true
+                } else if (config.recognizeBoolean && text.equalsIgnoreCase('false')) {
+                    nodeValue = false
+                } else if (config.recognizeNumber) {
+                    try {
+                        nodeValue = Integer.parseInt(text)
+                    } catch (NumberFormatException e1) {
+                        try {
+                            nodeValue = Double.parseDouble(text)
+                        } catch (NumberFormatException e2) {
+                            nodeValue = text
+                        }
+                    }
+                } else {
+                    nodeValue = text
+                }
+            } else if (config.recognizeNull) {
+                nodeValue = config.nullValue != null ? config.nullValue : null
+            }
+        } else {
+            nodeValue = [:]
+            def childValues = [:].withDefault { [] }
+            children.each { child ->
+                def childName = child.name()
+                def childPath = "${newPath}/${childName}"
+                stack.push([node: child, path: newPath, parentMap: nodeValue, parentName: childName])
+            }
+        }
+
+        def isArray = config.treatAsArray?.contains(newPath)
+        if (isArray) {
+            def arrayNodeValue = node.children()?.collect { it.text().trim() }
+            parentMap[nodeName] = arrayNodeValue
+        } else {
+            if (parentName) {
+                if (parentMap[parentName] == null) {
+                    parentMap[parentName] = nodeValue
+                } else if (!(parentMap[parentName] instanceof List)) {
+                    parentMap[parentName] = [parentMap[parentName], nodeValue]
+                } else {
+                    parentMap[parentName] << nodeValue
+                }
+            } else {
+                jsonResult = [(node.name()): nodeValue]
+            }
+        }
+    }
+
+    // Strip levels (optional)
+    def startNode = xml
+    def levels = config.stripLevels ?: 0
+    while (levels > 0 && startNode instanceof groovy.xml.slurpersupport.GPathResult) {
+        def children = startNode.children()
+        if (children.size() != 1) {
+            break
+        }
+        startNode = children[0]
+        levels--
+    }
+
+    def jsonOutput = JsonOutput.toJson(jsonResult)
+
+    result.contentType = 'application/json'
+    scope.headers.'Content-Type' = 'application/json'
+    return jsonOutput
+
+} catch (Exception e) {
+    result.state = State.FAILURE
+    result.code = 500
+    result.error = "{\"error\": \"${e.getMessage()?.replaceAll('\"', '\\\\')}\"}"
+    result.contentType = 'application/json'
+    return result.error
+}

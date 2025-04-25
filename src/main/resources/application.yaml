@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: migration-tool
+  shell:
+    interactive:
+      enabled: true
+    script:
+      enabled: true
+---
+server:
+  port: 8089
+---
+groovy:
+  json-to-xml: "groovy/json-to-xml.groovy.script"
+  decode: "groovy/decode-jwt.groovy.script"
+  xml-to-json: "groovy/xml-to-json.groovy.script"
+  message-validation: "groovy/message-validation.groovy.script"
+  raise-fault: "groovy/raise-fault.groovy.script"
+  lookup-cache : "groovy/lookup-cache-set-attribute.groovy.script"
+---
+gravitee:
+  apigee-to-gravitee-conditions: "conditions/apigee-to-gravitee-el.txt"
+  apigee-to-gravitee-assign-message-templates: "conditions/assign-message-template.txt"
+  dictionary:
+    name: "default-dictionary"
+    output: "dictionary.csv"
