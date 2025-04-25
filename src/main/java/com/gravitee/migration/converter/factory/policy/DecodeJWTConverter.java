@@ -2,20 +2,19 @@ package com.gravitee.migration.converter.factory.policy;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.util.constants.GraviteeCliConstants;
+import com.gravitee.migration.util.constants.policy.PolicyConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import javax.xml.xpath.XPath;
-
 import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.GraviteeCliUtils.createGroovyConfiguration;
 import static com.gravitee.migration.util.StringUtils.readGroovyPolicy;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.GROOVY;
 
 /**
  * <p>Converts DecodeJWT policy from Apigee to Gravitee.</p>
@@ -43,7 +42,7 @@ public class DecodeJWTConverter implements PolicyConverter {
 
     @Override
     public boolean supports(String policyType) {
-        return GraviteeCliConstants.Policy.DECODE_JWT.equals(policyType);
+        return PolicyConstants.DECODE_JWT.equals(policyType);
     }
 
     /**

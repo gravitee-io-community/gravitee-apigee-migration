@@ -15,16 +15,14 @@ import java.util.Map;
  * This service provides methods to find specific directories and parse XML files within them.
  */
 public interface FileReaderService {
-
-//    void processPolicies(String rootFolder, String outputCsv) throws Exception;
     /**
-     * Finds the "apiproxy" directory within the specified folder location.
+     * Returns the absolute path of the directory if found.
      *
-     * @param folderLocation The root folder location to search for the "apiproxy" directory.
-     * @return The absolute path of the found "apiproxy" directory.
-     * @throws IllegalArgumentException if no "apiproxy" directory is found.
+     * @param folderLocation The input folder location
+     * @return The absolute path of the directory if found.
+     * @throws IllegalArgumentException if the folder is not found
      */
-    String findApiProxyDirectory(String folderLocation);
+    String findDirectory(String folderLocation, String folderName);
 
     /**
      * Parses XML files from the specified folder location and folder name.
@@ -91,7 +89,10 @@ public interface FileReaderService {
     void addValueToDictionaryMap(String key, String value);
 
     /**
-     * Converts the dictionary map to a CSV file. The values in the dictionary map need to be populated by the user.
+     * Converts the dictionary map to a CSV file, appending new entries if the file already exists.
+     *
+     * @param outputCsv The path to the output CSV file.
+     * @throws IOException if an I/O error occurs while writing to the file.
      */
     void dictionaryMapToCsv(String outputCsv) throws IOException;
 

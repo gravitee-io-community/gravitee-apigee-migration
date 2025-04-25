@@ -14,8 +14,8 @@ import java.util.Map;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.GraviteeCliUtils.createGroovyConfiguration;
 import static com.gravitee.migration.util.StringUtils.readGroovyPolicy;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.MESSAGE_VALIDATION;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.MESSAGE_VALIDATION;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.GROOVY;
 
 /**
  * <p>Converts MessageValidation policy from Apigee to Gravitee.</p>

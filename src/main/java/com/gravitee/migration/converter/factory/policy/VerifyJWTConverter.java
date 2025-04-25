@@ -14,11 +14,11 @@ import java.util.Map;
 import static com.gravitee.migration.enums.SignatureEnum.fromValue;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.wrapValueInContextAttributes;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.CONFIGURATION;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.SCOPE;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.VERIFY_JWT;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.JWT;
+import static com.gravitee.migration.util.constants.CommonConstants.CONFIGURATION;
+import static com.gravitee.migration.util.constants.CommonConstants.SCOPE;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.VERIFY_JWT;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.JWT;
 
 /**
  * <p>Converts VerifyJWT policy from Apigee to Gravitee.</p>
@@ -60,7 +60,7 @@ public class VerifyJWTConverter implements PolicyConverter {
     private void constructConfigurationObject(ObjectNode phaseObject, String algorithm, String publicKey, String phase) {
         var configurationObject = phaseObject.putObject(CONFIGURATION);
         configurationObject.put(SCOPE, phase.toUpperCase());
-        configurationObject.put(PUBLIC_KEY_RESOLVER, "GIVEN_KEY");
+        configurationObject.put(PUBLIC_KEY_RESOLVER, GIVEN_KEY);
 
         var jwksObject = configurationObject.putObject(JWKS_CONFIG);
         jwksObject.put(RESOLVER_PARAMETER, wrapValueInContextAttributes(publicKey));

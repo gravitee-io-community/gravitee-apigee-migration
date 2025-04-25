@@ -12,33 +12,40 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.*;
-
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.API_PROXY;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class FileReaderServiceImpl implements FileReaderService {
 
+    // Shifting between folders is done in order to know what folder we are currently located in when we are performing JS or XSLT conversion
     private String inputFolderLocation;
     private String currentFolder;
-    private String apiProxyFolderLocation;
+    private String folderLocation;
     private final Map<String, String> dictionaryMap = new HashMap<>();
 
     @Override
-    public String findApiProxyDirectory(String folderLocation) {
+    public String findDirectory(String folderLocation, String folderName) {
         folderLocation = folderLocation.replace(",", " ");
         File rootFolder = new File(folderLocation);
 
-        // Look for the apiproxy folder directly in the provided folder location
-        File possibleApiProxyFolder = new File(rootFolder, API_PROXY);
+        File possibleApiProxyFolder;
+        if (folderName == null || folderName.isEmpty()) {
+            possibleApiProxyFolder = rootFolder;
+        } else {
+            possibleApiProxyFolder = new File(rootFolder, folderName);
+        }
 
         if (possibleApiProxyFolder.exists() && possibleApiProxyFolder.isDirectory()) {
             inputFolderLocation = rootFolder.getAbsolutePath();
-            apiProxyFolderLocation = possibleApiProxyFolder.getAbsolutePath();
-            return possibleApiProxyFolder.getAbsolutePath(); // Return the absolute path of the found apiproxy folder
+            this.folderLocation = possibleApiProxyFolder.getAbsolutePath();
+            currentFolder = rootFolder.getAbsolutePath();
+            return possibleApiProxyFolder.getAbsolutePath();
         }
 
-        throw new IllegalArgumentException("No apiproxy folder found in the specified location.");
+        throw new IllegalArgumentException("No folder found in the specified location.");
     }
 
     @Override
@@ -78,7 +85,7 @@ public class FileReaderServiceImpl implements FileReaderService {
         File parentDir = inputFolder.getParentFile();
 
         if (parentDir != null) {
-            // Search recursively in all folders and subfolders of the parent directory
+            // Search recursively in all folders to find the shared flow
             File result = searchRecursively(parentDir, folderNamePrefix);
             if (result != null) {
                 currentFolder = result.getAbsolutePath();
@@ -122,7 +129,7 @@ public class FileReaderServiceImpl implements FileReaderService {
 
     @Override
     public void setCurrentFolderToInitialState() {
-        this.currentFolder = apiProxyFolderLocation.replace("\\apiproxy", "");
+        this.currentFolder = folderLocation.replaceAll("\\\\(apiproxy|sharedflowbundle)", "");
     }
 
     @Override
@@ -151,6 +158,7 @@ public class FileReaderServiceImpl implements FileReaderService {
         }
     }
 
+
     @Override
     public void addValueToDictionaryMap(String key, String value) {
         if (key != null && !key.isEmpty() && value != null && !value.isEmpty()) {
@@ -161,9 +169,25 @@ public class FileReaderServiceImpl implements FileReaderService {
     @Override
     public void dictionaryMapToCsv(String outputCsv) throws IOException {
         File file = new File(outputCsv);
-        try (FileWriter writer = new FileWriter(file)) {
+        Map<String, String> existingEntries = new HashMap<>();
+
+        // Read existing entries from the file
+        if (file.exists()) {
+            List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
+            for (String line : lines) {
+                String[] parts = line.split(",", 2);
+                if (parts.length == 2) {
+                    existingEntries.put(parts[0], parts[1]);
+                }
+            }
+        }
+
+        // Write only new entries to the file
+        try (FileWriter writer = new FileWriter(file, true)) { // 'true' enables appending to the file
             for (Map.Entry<String, String> entry : dictionaryMap.entrySet()) {
-                writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+                if (!existingEntries.containsKey(entry.getKey())) {
+                    writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+                }
             }
             writer.flush(); // Ensure all data is written to the file
         }

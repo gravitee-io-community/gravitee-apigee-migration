@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * This class is responsible for mapping the documentation field in the Gravitee JSON.
+ * This class is responsible for mapping the documentation field in the Gravitee JSON. (mock documentation)
  */
 @Component
 public class DocumentationObjectConverter {

@@ -2,8 +2,8 @@ package com.gravitee.migration.converter.factory.policy;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.converter.object.PlanObjectConverter;
 import com.gravitee.migration.service.filereader.impl.FileReaderServiceImpl;
+import com.gravitee.migration.util.policy.PolicyMapperUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -17,12 +17,12 @@ import javax.xml.xpath.XPathExpressionException;
 import java.util.List;
 import java.util.Map;
 
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.FLOW_CALLOUT;
+import static com.gravitee.migration.util.constants.folder.FolderConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.FLOW_CALLOUT;
 
 
 /**
- * Converts FlowCallout policy from APIgee to Gravitee.
+ * Converts FlowCallout policy from Apigee to Gravitee. (used for nesting shared flows withing shared flows)
  * This class implements the PolicyConverter interface and provides the logic to convert the FlowCallout policy.
  */
 @Component
@@ -32,14 +32,15 @@ public class FlowCalloutConverter implements PolicyConverter {
     public final FileReaderServiceImpl fileReaderService;
     private final XPath xPath;
     @Lazy
-    private final PlanObjectConverter planObjectConverter;
+    private final PolicyMapperUtil policyMapperUtil;
 
     @Lazy
-    public FlowCalloutConverter(FileReaderServiceImpl fileReaderService, XPath xPath, PlanObjectConverter planObjectConverter) {
+    public FlowCalloutConverter(FileReaderServiceImpl fileReaderService, XPath xPath, PolicyMapperUtil policyMapperUtil) {
         this.fileReaderService = fileReaderService;
         this.xPath = xPath;
-        this.planObjectConverter = planObjectConverter;
+        this.policyMapperUtil = policyMapperUtil;
     }
+
 
     @Override
     public boolean supports(String policyType) {
@@ -78,6 +79,6 @@ public class FlowCalloutConverter implements PolicyConverter {
     private void processSharedFlowBundleSteps(Document sharedFlow, ArrayNode phaseArray, List<Document> sharedFlowPolicies, String scope) throws XPathExpressionException {
         var steps = (NodeList) xPath.evaluate("/SharedFlow/Step", sharedFlow, XPathConstants.NODESET);
 
-        planObjectConverter.applyPoliciesToFlowNodes(steps, sharedFlowPolicies, phaseArray, scope);
+        policyMapperUtil.applyPoliciesToFlowNodes(steps, sharedFlowPolicies, phaseArray, scope, false);
     }
 }

@@ -13,8 +13,8 @@ import java.util.regex.Pattern;
 
 import static ch.qos.logback.core.util.StringUtil.isNullOrEmpty;
 import static com.gravitee.migration.util.StringUtils.isNotNullOrEmpty;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.*;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.*;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GraviteeCliUtils {
@@ -150,7 +150,7 @@ public class GraviteeCliUtils {
         // Set the path in the selectors
         selectorsObject.put(TYPE, HTTP);
         selectorsObject.put(PATH, path);
-        selectorsObject.put(PATH_OPERATOR, EQUALS);
+        selectorsObject.put(PATH_OPERATOR, EQUALS_PATH_OPERATOR);
 
         // Remove paths and methods from the condition
         String remainingCondition = removePathsAndMethodsFromCondition(condition);

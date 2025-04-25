@@ -13,11 +13,11 @@ import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.wrapValueInContextAttributes;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.VERIFY_API_KEY;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.API_KEY;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.TRANSFORM_HEADERS;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.VERIFY_API_KEY;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.API_KEY;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.TRANSFORM_HEADERS;
 
 /**
  * <p>Converts VerifyAPIKey policy from Apigee to Gravitee.</p>

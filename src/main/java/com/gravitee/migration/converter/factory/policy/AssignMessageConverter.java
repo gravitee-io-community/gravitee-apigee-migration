@@ -19,11 +19,11 @@ import java.util.Map;
 import static com.gravitee.migration.util.GraviteeCliUtils.convertApigeeConditionToGravitee;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.ADD_HEADERS;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.METHOD;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.ASSIGN_MESSAGE;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.*;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.ADD_HEADERS;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.METHOD;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.ASSIGN_MESSAGE;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.*;
 
 /**
  * <p>Converts the AssignMessage policy from Apigee to Gravitee format.</p>
@@ -93,7 +93,7 @@ public class AssignMessageConverter implements PolicyConverter {
         }
     }
 
-    private ArrayNode createAttributesInPhaseObject(String condition, String name, String phase, ArrayNode phaseArray, Map<String, String> conditionMappings) throws XPathExpressionException {
+    private ArrayNode createAttributesInPhaseObject(String condition, String name, String phase, ArrayNode phaseArray, Map<String, String> conditionMappings) {
         var phaseObject = createBasePhaseObject(condition, name, ASSIGN_ATTRIBUTES, phaseArray, conditionMappings);
         var configurationObject = phaseObject.putObject(CONFIGURATION);
         configurationObject.put(SCOPE, phase.toUpperCase());

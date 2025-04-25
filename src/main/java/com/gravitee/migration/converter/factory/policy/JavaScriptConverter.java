@@ -3,7 +3,7 @@ package com.gravitee.migration.converter.factory.policy;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.service.filereader.FileReaderService;
-import com.gravitee.migration.util.constants.GraviteeCliConstants;
+import com.gravitee.migration.util.constants.policy.PolicyTypeConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -16,11 +16,11 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.ON_REQUEST_SCRIPT;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.ON_RESPONSE_SCRIPT;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.JAVASCRIPT;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.folder.FolderConstants.RESOURCES;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.ON_REQUEST_SCRIPT;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.ON_RESPONSE_SCRIPT;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.JAVASCRIPT;
 
 /**
  * <p>Converts JavaScript policy from Apigee to Gravitee.</p>
@@ -43,10 +43,10 @@ public class JavaScriptConverter implements PolicyConverter {
     /**
      * Converts the JavaScript policy from Apigee to Gravitee.
      *
-     * @param condition     The condition to be applied to the policy.
-     * @param apiGeePolicy   The policy document.
-     * @param phaseArray     The array node to which the converted policy will be added (e.g., request, response).
-     * @param phase          The phase of the policy (e.g., request, response).
+     * @param condition    The condition to be applied to the policy.
+     * @param apiGeePolicy The policy document.
+     * @param phaseArray   The array node to which the converted policy will be added (e.g., request, response).
+     * @param phase        The phase of the policy (e.g., request, response).
      * @throws Exception if an error occurs during conversion.
      */
     @Override
@@ -60,7 +60,7 @@ public class JavaScriptConverter implements PolicyConverter {
 
     private void createConfigurationForJavascript(String condition, String fileName, String javaScriptContent, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws XPathExpressionException {
         // Create a base scope node for the JavaScript policy
-        var objectNode = createBasePhaseObject(condition, fileName, GraviteeCliConstants.PolicyType.JAVASCRIPT, phaseArray, conditionMappings);
+        var objectNode = createBasePhaseObject(condition, fileName, PolicyTypeConstants.JAVASCRIPT, phaseArray, conditionMappings);
         var configurationObject = objectNode.putObject(CONFIGURATION);
         configurationObject.put(SCOPE, phase.toUpperCase());
 
@@ -82,10 +82,18 @@ public class JavaScriptConverter implements PolicyConverter {
         return getJavaScriptContent(resourcesPath, folderName, fileName);
     }
 
+    // Find the correct path to the resources folder
     private String resolveResourcesPath() {
         String currentFolder = fileReaderService.getCurrentFolder();
-        Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
-        return Paths.get(childFolder.toString(), RESOURCES).toString();
+
+        // If we are in a shared flow, we need to find the first child folder
+        if (currentFolder.contains("\\SharedFlows\\")) {
+            Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
+            return  Paths.get(childFolder.toString(), RESOURCES).toString();
+        } else {
+            return Paths.get(currentFolder, RESOURCES).toString();
+
+        }
     }
 
     private String getJavaScriptContent(String resourcesPath, String folderName, String fileName) throws IOException {

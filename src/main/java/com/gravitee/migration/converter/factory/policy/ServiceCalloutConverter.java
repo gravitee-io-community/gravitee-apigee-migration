@@ -20,10 +20,10 @@ import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.SERVICE_CALLOUT;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.HTTP_CALLOUT;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.SERVICE_CALLOUT;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.HTTP_CALLOUT;
 
 /**
  * <p>Converts ServiceCallout policy from Apigee to Gravitee.</p>

@@ -3,7 +3,6 @@ package com.gravitee.migration.converter.factory.policy;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.converter.object.ApiObjectConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
@@ -20,12 +19,12 @@ import java.util.Map;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.buildCacheKey;
 import static com.gravitee.migration.util.StringUtils.readGroovyPolicy;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.CACHE_KEY;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.DEFAULT_OPERATION;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.LOOKUP_CACHE;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.DATA_CACHE;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.CACHE_KEY;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.DEFAULT_OPERATION;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.LOOKUP_CACHE;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.DATA_CACHE;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.GROOVY;
 
 /**
  * <p>Converts LookupCache policy from Apigee to Gravitee.</p>
@@ -41,12 +40,10 @@ public class LookupCacheConverter implements PolicyConverter {
     private String lookupCacheGroovyFileLocation;
 
     private final XPath xPath;
-    private final ApiObjectConverter apiObjectConverter;
 
     public boolean supports(String policyType) {
         return LOOKUP_CACHE.equals(policyType);
     }
-// class java.util.regex.Matcher group java.lang.Integer
     /**
      * Converts the LookupCache policy from Apigee to Gravitee.
      *
@@ -58,8 +55,6 @@ public class LookupCacheConverter implements PolicyConverter {
      */
     @Override
     public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws XPathExpressionException, IOException {
-        // Create the cache in resources if it is not already present
-        apiObjectConverter.buildResources(apiGeePolicy);
         // Extract properties
         var policyName = xPath.evaluate("/LookupCache/@name", apiGeePolicy);
         var cacheResource = xPath.evaluate("/LookupCache/CacheResource", apiGeePolicy);

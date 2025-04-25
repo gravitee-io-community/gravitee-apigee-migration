@@ -14,9 +14,14 @@ public class ShellCommand {
         this.migrationService = migrationService;
     }
 
+    /**
+     * Starts the migration process for the APIProxy and the shared flows.
+     * ex. input "start path/to/apiproxy"
+     *
+     * @param apiProxyFolderLocation The folder location of the APIProxy that needs to be migrated.
+     */
     @ShellMethod(key = "start", value = "Start the migration")
-    public String startMigration(@ShellOption(help = "The APIGee XML file location.") String xmlFileLocation) {
-        return migrationService.start(xmlFileLocation);
+    public void startFullMigration(@ShellOption(help = "The APIProxy folder location.") String apiProxyFolderLocation) {
+        migrationService.start(apiProxyFolderLocation);
     }
-
 }

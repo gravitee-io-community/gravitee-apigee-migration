@@ -16,10 +16,9 @@ import java.util.UUID;
 
 import static com.gravitee.migration.util.StringUtils.isNotNullOrEmpty;
 import static com.gravitee.migration.util.StringUtils.removeNewLines;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Api.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Api.PATH;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
+import static com.gravitee.migration.util.constants.object.ApiObjectConstants.*;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.folder.FolderConstants.RESOURCES;
 
 /**
  * This class is responsible for mapping fields from the Apigee XML to the api object in the Gravitee JSON.
@@ -88,8 +87,8 @@ public class ApiObjectConverter {
 
         // Create the configuration as a JSON string - default values(not present in Apigee)
         var configurationMap = new HashMap<>();
-        configurationMap.put("timeToIdleSeconds", 300);
-        configurationMap.put("timeToLiveSeconds", 3600);
+        configurationMap.put("timeToIdleSeconds", 0);
+        configurationMap.put("timeToLiveSeconds", 0);
         configurationMap.put("maxEntriesLocalHeap", 1000);
 
         String configurationJson;

@@ -15,8 +15,8 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.util.stream.Collectors;
 
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.JWT;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.JWT;
 import static java.util.Objects.isNull;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

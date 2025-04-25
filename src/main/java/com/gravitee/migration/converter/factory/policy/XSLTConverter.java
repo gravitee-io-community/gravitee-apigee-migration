@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.service.filereader.FileReaderService;
-import com.gravitee.migration.util.constants.GraviteeCliConstants;
+import com.gravitee.migration.util.constants.policy.PolicyTypeConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -25,11 +25,11 @@ import java.util.Objects;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.convertDocumentToString;
 import static com.gravitee.migration.util.StringUtils.isNotNullOrEmpty;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Folder.RESOURCES;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.STYLESHEET;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.XSLT;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.ASSIGN_ATTRIBUTES;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.folder.FolderConstants.RESOURCES;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.STYLESHEET;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.XSLT;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.ASSIGN_ATTRIBUTES;
 
 /**
  * <p>Converts XSLT policy from Apigee to Gravitee.</p>
@@ -64,10 +64,18 @@ public class XSLTConverter implements PolicyConverter {
     private Document extractCorrespondingDocument(Document apiGeePolicy) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         // Extract folder we are currently located in
         String currentFolder = fileReaderService.getCurrentFolder();
-        // Get the first child folder of the current folder(apiproxy or sharedflowbundle)
-        Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
+
+        // If we are in a shared flow, we need to find the first child folder
+        String resourcesPath;
+        if(currentFolder.contains("\\SharedFlows\\")){
+            Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
+            resourcesPath = Paths.get(childFolder.toString(), RESOURCES).toString();
+        }
+        else {
+            resourcesPath = Paths.get(currentFolder, RESOURCES).toString();
+
+        }
         // Get the resources path
-        String resourcesPath = Paths.get(childFolder.toString(), RESOURCES).toString();
         // Extract the resource URL from the policy
         var resourceUrl = xPath.evaluate("/XSL/ResourceURL", apiGeePolicy);
 
@@ -84,7 +92,7 @@ public class XSLTConverter implements PolicyConverter {
     private void createConfigurationForXslt(String condition, String fileName, Document xsltDocument, Document apiGeePolicy, ArrayNode scopeArray, String scope
     , Map<String, String> conditionMappings) throws Exception {
         // Create the base scope node for the XSLT policy
-        var scopeObjectNode = createBasePhaseObject(condition, fileName, GraviteeCliConstants.PolicyType.XSLT, scopeArray, conditionMappings);
+        var scopeObjectNode = createBasePhaseObject(condition, fileName, PolicyTypeConstants.XSLT, scopeArray, conditionMappings);
         // Create the configuration object for the XSLT policy
         var configurationObject = scopeObjectNode.putObject(CONFIGURATION);
         configurationObject.put(SCOPE, scope.toUpperCase());

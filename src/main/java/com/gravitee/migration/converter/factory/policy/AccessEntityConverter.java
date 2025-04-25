@@ -11,7 +11,7 @@ import javax.xml.xpath.XPath;
 
 import java.util.Map;
 
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.ACCESS_ENTITY;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.ACCESS_ENTITY;
 
 @Component
 @RequiredArgsConstructor

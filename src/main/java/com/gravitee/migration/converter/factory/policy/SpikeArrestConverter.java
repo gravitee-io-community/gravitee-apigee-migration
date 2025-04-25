@@ -4,23 +4,22 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
 import com.gravitee.migration.enums.RateLimitIntervalMapper;
-import com.gravitee.migration.util.constants.GraviteeCliConstants;
+import com.gravitee.migration.util.constants.policy.PolicyTypeConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
-
 import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.wrapValueInContextAttributes;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.ADD_HEADERS;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.SPIKE;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.SPIKE_ARREST;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.ASSIGN_ATTRIBUTES;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.ADD_HEADERS;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.SPIKE;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.SPIKE_ARREST;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.ASSIGN_ATTRIBUTES;
 
 /**
  * <p>Converts the SpikeArrest policy from Apigee to Gravitee format.</p>
@@ -30,7 +29,7 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyT
  */
 @Component
 @RequiredArgsConstructor
-public class SpikeArrestMapper implements PolicyConverter {
+public class SpikeArrestConverter implements PolicyConverter {
 
     private final XPath xPath;
 
@@ -52,7 +51,7 @@ public class SpikeArrestMapper implements PolicyConverter {
     public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws XPathExpressionException {
         // Extract properties
         var policyName = xPath.evaluate("/SpikeArrest/@name", apiGeePolicy);
-        var scopeNode = createBasePhaseObject(condition, policyName, GraviteeCliConstants.PolicyType.SPIKE_ARREST, phaseArray, conditionMappings);
+        var scopeNode = createBasePhaseObject(condition, policyName, PolicyTypeConstants.SPIKE_ARREST, phaseArray, conditionMappings);
         var identifier = xPath.evaluate("/SpikeArrest/Identifier/@ref", apiGeePolicy);
 
         constructRequestConfiguration(scopeNode, apiGeePolicy);
@@ -92,6 +91,7 @@ public class SpikeArrestMapper implements PolicyConverter {
         spikeNode.put(PERIOD_TIME_UNIT, RateLimitIntervalMapper.mapShorthandRate(rateString));
 
         var identifierRef = xPath.evaluate("/SpikeArrest/Identifier/@ref", apiGeePolicy);
+        // Wrap the identifierRef value in context attributes
         if (identifierRef.equals("request.header.Origin")) {
             spikeNode.put(KEY, String.format(REQUEST_HEADER_WRAPPED, "origin"));
         }

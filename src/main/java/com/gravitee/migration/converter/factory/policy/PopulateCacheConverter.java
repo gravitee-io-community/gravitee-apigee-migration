@@ -3,7 +3,6 @@ package com.gravitee.migration.converter.factory.policy;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.converter.object.ApiObjectConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -12,17 +11,16 @@ import org.w3c.dom.NodeList;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-
 import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.buildCacheKey;
 import static com.gravitee.migration.util.StringUtils.wrapValueInContextAttributes;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.CACHE_KEY;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Plan.DEFAULT_OPERATION;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.POPULATE_CACHE;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.DATA_CACHE;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.CACHE_KEY;
+import static com.gravitee.migration.util.constants.object.PlanObjectConstants.DEFAULT_OPERATION;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.POPULATE_CACHE;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.DATA_CACHE;
 
 /**
  * <p>Converts PopulateCache policy from Apigee to Gravitee.</p>
@@ -35,7 +33,6 @@ import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyT
 public class PopulateCacheConverter implements PolicyConverter {
 
     private final XPath xPath;
-    private final ApiObjectConverter apiObjectConverter;
 
     @Override
     public boolean supports(String policyType) {
@@ -53,8 +50,6 @@ public class PopulateCacheConverter implements PolicyConverter {
      */
     @Override
     public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws Exception {
-        // Create the cache in resources if it is not already present
-        apiObjectConverter.buildResources(apiGeePolicy);
         // Extract properties
         var policyName = xPath.evaluate("/PopulateCache/@name", apiGeePolicy);
         var cacheResourceName = xPath.evaluate("/PopulateCache/CacheResource", apiGeePolicy);

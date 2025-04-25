@@ -16,10 +16,10 @@ import javax.xml.xpath.XPathExpressionException;
 import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.ACCESS_ENTITY;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.EXTRACT_VARIABLES;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.ASSIGN_ATTRIBUTES;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.ACCESS_ENTITY;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.EXTRACT_VARIABLES;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.ASSIGN_ATTRIBUTES;
 
 /**
  * <p>Converts ExtractVariables policy from Apigee to Gravitee.</p>
@@ -57,7 +57,6 @@ public class ExtractVariablesConverter implements PolicyConverter {
         var prefix = xPath.evaluate("/ExtractVariables/VariablePrefix", apiGeePolicy);
         var source = xPath.evaluate("/ExtractVariables/Source", apiGeePolicy);
 
-//        processURIPatter();
         // Check if we need to extract variables from JSON or XML payload
         if (hasJsonPayloadVariables(apiGeePolicy)) {
             processJsonPayloadVariables(condition, apiGeePolicy, phaseArray, policyName, prefix, source, phase, conditionMappings);
@@ -65,10 +64,6 @@ public class ExtractVariablesConverter implements PolicyConverter {
             processXmlPayloadVariables(condition, apiGeePolicy, phaseArray, policyName, prefix, source, phase, conditionMappings);
         }
     }
-
-//    private void processURIPatter(Document apiGeePolicy){
-//        var uriPaths = (NodeList) xPath.evaluate("/ExtractVariables/URIPath/Pattern", apiGeePolicy, XPathConstants.NODESET);
-//    }
 
     private boolean hasJsonPayloadVariables(Document apiGeePolicy) throws XPathExpressionException {
         var jsonPayloadVariables = (NodeList) xPath.evaluate("/ExtractVariables/JSONPayload/Variable", apiGeePolicy, XPathConstants.NODESET);

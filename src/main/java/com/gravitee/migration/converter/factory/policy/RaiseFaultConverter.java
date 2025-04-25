@@ -15,9 +15,9 @@ import java.util.Map;
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
 import static com.gravitee.migration.util.StringUtils.isNotNullOrEmpty;
 import static com.gravitee.migration.util.StringUtils.readGroovyPolicy;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Common.*;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.Policy.RAISE_FAULT;
-import static com.gravitee.migration.util.constants.GraviteeCliConstants.PolicyType.GROOVY;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.policy.PolicyConstants.RAISE_FAULT;
+import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.GROOVY;
 
 /**
  * <p>This class is responsible for converting the RaiseFault policy from the old format to the new format.</p>
