@@ -22,7 +22,20 @@ The project can be built with the following command:
 ```
 mvn clean packgage
 ```
-
+ 
+### Folder Structure
+```
+Migration/  -- this can be any name
+├── ApiProxy/  -- this is the folder of the APIProxy that we are migrating
+│   └── apiproxy
+└── SharedFlows/  -- this is the folder of the SharedFlows that we are migrating (needs to be SharedFlows), it should contain all the sharedflows used in the APIProxy
+    ├── SharedFlow1/
+    │   └── sharedflowbundle
+    ├── SharedFlow2/
+    │   └── sharedflowbundle
+    └── SharedFlow3/
+        └── sharedflowbundle
+```
 To start the project, you can use the following command:
 
 ```
@@ -32,7 +45,7 @@ java -jar migration-tool-0.0.1-SNAPSHOT.jar
 Available Commands:
 
 ```
-start \someLocation\folderName
+start Migration/ApiProxy -- based on the example above, this will start the migration of the ApiProxy and SharedFlows
 ```
 
 To start the application and execute the migration directly navigate to the gravitee-cli folder and execute:
