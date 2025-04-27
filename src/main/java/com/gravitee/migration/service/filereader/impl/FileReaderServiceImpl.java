@@ -1,6 +1,8 @@
 package com.gravitee.migration.service.filereader.impl;
 
 import com.gravitee.migration.service.filereader.FileReaderService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -9,53 +11,34 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class FileReaderServiceImpl implements FileReaderService {
 
-    // Shifting between folders is done in order to know what folder we are currently located in when we are performing JS or XSLT conversion
-    private String inputFolderLocation;
-    private String currentFolder;
-    private String folderLocation;
-    private final Map<String, String> dictionaryMap = new HashMap<>();
-
-    @Override
-    public String findDirectory(String folderLocation, String folderName) {
+    public String readAbsolutePathOfDirectory(String folderLocation, String folderName) {
+        // Used if folder has whitespaces
         folderLocation = folderLocation.replace(",", " ");
-        File rootFolder = new File(folderLocation);
 
-        File possibleApiProxyFolder;
-        if (folderName == null || folderName.isEmpty()) {
-            possibleApiProxyFolder = rootFolder;
-        } else {
-            possibleApiProxyFolder = new File(rootFolder, folderName);
-        }
+        File folder = new File(folderLocation, folderName);
 
-        if (possibleApiProxyFolder.exists() && possibleApiProxyFolder.isDirectory()) {
-            inputFolderLocation = rootFolder.getAbsolutePath();
-            this.folderLocation = possibleApiProxyFolder.getAbsolutePath();
-            currentFolder = rootFolder.getAbsolutePath();
-            return possibleApiProxyFolder.getAbsolutePath();
-        }
-
-        throw new IllegalArgumentException("No folder found in the specified location.");
+        return folder.getAbsolutePath();
     }
 
     @Override
-    public List<Document> parseXmlFiles(String folderLocation, String folderName) throws ParserConfigurationException, IOException, SAXException {
-        File xmlFilesFolder = getFolder(folderLocation, folderName);
-        File[] xmlFiles = listXmlFiles(xmlFilesFolder);
+    public List<Document> readFiles(String folderLocation, String folderName) throws ParserConfigurationException, IOException, SAXException {
+        File filesFolder = getFolder(folderLocation, folderName);
+        File[] files = listFiles(filesFolder);
         List<Document> policyDocuments = new ArrayList<>();
 
-        if (xmlFiles != null) {
-            for (File policyFile : xmlFiles) {
+        if (files != null) {
+            for (File policyFile : files) {
                 policyDocuments.add(parseXmlFile(getSecureDocumentBuilder(), policyFile));
             }
         }
@@ -63,7 +46,7 @@ public class FileReaderServiceImpl implements FileReaderService {
     }
 
     @Override
-    public Map<String, String> parseJavaScriptFiles(String folderLocation, String folderName) throws IOException {
+    public Map<String, String> readJavaScriptFiles(String folderLocation, String folderName) throws IOException {
         File jsFilesFolder = getFolder(folderLocation, folderName);
         File[] jsFiles = listJavaScriptFiles(jsFilesFolder);
         Map<String, String> jsFileContents = new HashMap<>();
@@ -79,62 +62,19 @@ public class FileReaderServiceImpl implements FileReaderService {
     }
 
     @Override
-    public File findFolderStartingWith(String folderNamePrefix) {
-        // Get the parent of inputFolderLocation
-        File inputFolder = new File(inputFolderLocation);
-        File parentDir = inputFolder.getParentFile();
+    public File findFolderStartingWith(String sharedFlowsFolder, String folderNamePrefix) {
+        File sharedFlowsDirectory = new File(sharedFlowsFolder).getParentFile().getParentFile();
 
-        if (parentDir != null) {
-            // Search recursively in all folders to find the shared flow
-            File result = searchRecursively(parentDir, folderNamePrefix);
-            if (result != null) {
-                currentFolder = result.getAbsolutePath();
-                return result;
+        if (sharedFlowsDirectory.exists() && sharedFlowsDirectory.isDirectory()) {
+            // List all subdirectories and find the first one that starts with the prefix
+            File[] matchingFolders = sharedFlowsDirectory.listFiles((dir, name) -> name.startsWith(folderNamePrefix) && new File(dir, name).isDirectory());
+            if (matchingFolders != null && matchingFolders.length > 0) {
+                return matchingFolders[0];
             }
         }
 
-        // If still not found, throw an exception
+        // If no matching folder is found, throw an exception
         throw new IllegalArgumentException("No folder found starting with: " + folderNamePrefix);
-    }
-
-    private File searchRecursively(File directory, String folderNamePrefix) {
-        File matchingFolder = findMatchingFolder(directory, folderNamePrefix);
-        if (matchingFolder != null) {
-            return matchingFolder;
-        }
-
-        return searchInSubFolders(directory, folderNamePrefix);
-    }
-
-    private File findMatchingFolder(File directory, String folderNamePrefix) {
-        File[] matchingFolders = directory.listFiles((dir, name) -> name.startsWith(folderNamePrefix));
-        if (matchingFolders != null && matchingFolders.length > 0) {
-            return matchingFolders[0];
-        }
-        return null;
-    }
-
-    private File searchInSubFolders(File directory, String folderNamePrefix) {
-        File[] subFolders = directory.listFiles(File::isDirectory);
-        if (subFolders != null) {
-            for (File subFolder : subFolders) {
-                File result = searchRecursively(subFolder, folderNamePrefix);
-                if (result != null) {
-                    return result;
-                }
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public void setCurrentFolderToInitialState() {
-        this.currentFolder = folderLocation.replaceAll("\\\\(apiproxy|sharedflowbundle)", "");
-    }
-
-    @Override
-    public String getCurrentFolder() {
-        return currentFolder;
     }
 
     @Override
@@ -145,52 +85,6 @@ public class FileReaderServiceImpl implements FileReaderService {
             }
         }
         return null;
-    }
-
-    @Override
-    public Path findFirstChildFolder(String folderPath) {
-        File folder = new File(folderPath);
-        File[] childFolders = folder.listFiles(File::isDirectory);
-        if (childFolders != null && childFolders.length > 0) {
-            return childFolders[0].toPath();
-        } else {
-            throw new IllegalArgumentException("No child folders found in the specified location.");
-        }
-    }
-
-
-    @Override
-    public void addValueToDictionaryMap(String key, String value) {
-        if (key != null && !key.isEmpty() && value != null && !value.isEmpty()) {
-            dictionaryMap.put(key, value);
-        }
-    }
-
-    @Override
-    public void dictionaryMapToCsv(String outputCsv) throws IOException {
-        File file = new File(outputCsv);
-        Map<String, String> existingEntries = new HashMap<>();
-
-        // Read existing entries from the file
-        if (file.exists()) {
-            List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
-            for (String line : lines) {
-                String[] parts = line.split(",", 2);
-                if (parts.length == 2) {
-                    existingEntries.put(parts[0], parts[1]);
-                }
-            }
-        }
-
-        // Write only new entries to the file
-        try (FileWriter writer = new FileWriter(file, true)) { // 'true' enables appending to the file
-            for (Map.Entry<String, String> entry : dictionaryMap.entrySet()) {
-                if (!existingEntries.containsKey(entry.getKey())) {
-                    writer.write(entry.getKey() + "," + entry.getValue() + "\n");
-                }
-            }
-            writer.flush(); // Ensure all data is written to the file
-        }
     }
 
     /**
@@ -209,12 +103,12 @@ public class FileReaderServiceImpl implements FileReaderService {
     }
 
     /**
-     * Lists all XML files in the specified folder.
+     * Lists all files in the specified folder.
      *
-     * @param folder The folder to search for XML files.
-     * @return An array of XML files found in the folder.
+     * @param folder The folder to search for the files.
+     * @return An array of the files found in the folder.
      */
-    private File[] listXmlFiles(File folder) {
+    private File[] listFiles(File folder) {
         return folder.listFiles((dir, name) ->
                 name.endsWith(".xml") || name.endsWith(".xsl") || name.endsWith(".xslt")
         );

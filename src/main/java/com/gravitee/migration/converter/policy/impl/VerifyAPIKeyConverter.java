@@ -1,7 +1,7 @@
-package com.gravitee.migration.converter.factory.policy;
+package com.gravitee.migration.converter.policy.impl;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.gravitee.migration.converter.factory.PolicyConverter;
+import com.gravitee.migration.converter.policy.PolicyConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;

@@ -1,8 +1,9 @@
 package com.gravitee.migration.util.policy;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.converter.factory.policy.SharedFlowConverter;
+import com.gravitee.migration.converter.policy.AdvancedPolicyConverter;
+import com.gravitee.migration.converter.policy.PolicyConverter;
+import com.gravitee.migration.converter.policy.impl.SharedFlowConverter;
 import com.gravitee.migration.infrastructure.configuration.GraviteeELTranslator;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class PolicyMapperUtil {
     private final XPath xPath;
     private final SharedFlowConverter sharedFlowConverter;
     private final List<PolicyConverter> policyConverters;
+    private final List<AdvancedPolicyConverter> advancedPolicyConverters;
     private final GraviteeELTranslator graviteeELTranslator;
     // used for collecting policies from the apiproxy and shared flow that can be later set in the api definition
     @Getter
@@ -45,21 +47,22 @@ public class PolicyMapperUtil {
     /**
      * Applies policies to flow nodes based on the step nodes and Apigee policies.
      *
-     * @param stepNodes      The list of step nodes to which policies will be applied.
-     * @param apiGeePolicies The list of Apigee policies to be converted and applied.
-     * @param objectNodes    The array node where the converted policies will be added.
-     * @param scope          The scope of the policies (e.g., request, response).
-     * @param isSharedFlow   Indicates if the flow is a shared flow.
+     * @param stepNodes             The list of step nodes to which policies will be applied.
+     * @param apiGeePolicies        The list of Apigee policies to be converted and applied.
+     * @param objectNodes           The array node where the converted policies will be added.
+     * @param scope                 The scope of the policies (e.g., request, response).
+     * @param isSharedFlow          Indicates if the flow is a shared flow.
+     * @param currentFolderLocation The current folder location for file reading. (used for extraction of js or xslt policies)
      * @throws XPathExpressionException if an error occurs during XPath evaluation.
      */
-    public void applyPoliciesToFlowNodes(NodeList stepNodes, List<Document> apiGeePolicies, ArrayNode objectNodes, String scope, boolean isSharedFlow) throws XPathExpressionException {
+    public void applyPoliciesToFlowNodes(NodeList stepNodes, List<Document> apiGeePolicies, ArrayNode objectNodes, String scope, boolean isSharedFlow, String currentFolderLocation) throws XPathExpressionException {
         graviteeELTranslator.loadConditionMappings();
 
         if (stepNodes != null && stepNodes.getLength() > 0) {
 
             for (int j = 0; j < stepNodes.getLength(); j++) {
                 var stepNode = stepNodes.item(j);
-                findAndApplyMatchingPolicy(stepNode, apiGeePolicies, objectNodes, scope, isSharedFlow);
+                findAndApplyMatchingPolicy(stepNode, apiGeePolicies, objectNodes, scope, isSharedFlow, currentFolderLocation);
             }
         }
     }
@@ -74,7 +77,7 @@ public class PolicyMapperUtil {
      * @param isSharedFlow   Indicates if the flow is a shared flow.
      * @throws XPathExpressionException if an error occurs during XPath evaluation.
      */
-    public void findAndApplyMatchingPolicy(Node stepNode, List<Document> apiGeePolicies, ArrayNode phaseArray, String phase, boolean isSharedFlow) throws XPathExpressionException {
+    public void findAndApplyMatchingPolicy(Node stepNode, List<Document> apiGeePolicies, ArrayNode phaseArray, String phase, boolean isSharedFlow, String currentFolderLocation) throws XPathExpressionException {
         // Extract the policy name from the step node
         var stepName = xPath.evaluate("Name", stepNode);
 
@@ -83,12 +86,12 @@ public class PolicyMapperUtil {
             var displayName = xPath.evaluate("/*/@name", apiGeePolicy);
             // Check if the step name matches the display name of the policy
             if (stepName.equals(displayName)) {
-                applyPolicyConverter(stepNode, apiGeePolicy, phaseArray, phase, isSharedFlow);
+                applyPolicyConverter(stepNode, apiGeePolicy, phaseArray, phase, isSharedFlow, currentFolderLocation);
             }
         }
     }
 
-    private void applyPolicyConverter(Node stepNode, Document apiGeePolicy, ArrayNode phaseArray, String phase, boolean isSharedFlow) throws XPathExpressionException {
+    private void applyPolicyConverter(Node stepNode, Document apiGeePolicy, ArrayNode phaseArray, String phase, boolean isSharedFlow, String currentFolderLocation) throws XPathExpressionException {
         // Extract the root element name of the policy
         var rootElement = (Node) xPath.evaluate("/*", apiGeePolicy, XPathConstants.NODE);
         var policyType = rootElement.getNodeName();
@@ -98,16 +101,17 @@ public class PolicyMapperUtil {
         collectJwtOrApiKeyPolicies(policyType);
         collectCachePolicies(policyType, apiGeePolicy);
 
-        processPolicy(policyType, isSharedFlow, condition, apiGeePolicy, phaseArray, phase);
+        processPolicy(policyType, isSharedFlow, condition, apiGeePolicy, phaseArray, phase, currentFolderLocation);
     }
 
-    private void processPolicy(String policyType, boolean isSharedFlow, String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase) throws XPathExpressionException {
+    private void processPolicy(String policyType, boolean isSharedFlow, String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, String currentFolderLocation) throws XPathExpressionException {
+        // Used for converting the FlowCallout of the apiproxy xml only (references the shared policy group in gravitee)
         if (isFlowCalloutPolicy(policyType, isSharedFlow)) {
             sharedFlowConverter.convert(condition, apiGeePolicy, phaseArray, phase, graviteeELTranslator.getConditionMappings());
         } else if (isUnavailableInResponsePhase(policyType, phase)) {
             // Policies not available in the response phase are skipped
         } else {
-            applyConverter(policyType, condition, apiGeePolicy, phaseArray, phase);
+            applyConverter(policyType, condition, apiGeePolicy, phaseArray, phase, currentFolderLocation);
         }
     }
 
@@ -131,16 +135,22 @@ public class PolicyMapperUtil {
         }
     }
 
-    private void applyConverter(String policyType, String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase) {
+    private void applyConverter(String policyType, String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, String currentFolderLocation) {
         try {
-            // Find the converter that supports the given policy type
-            var converter = getConverter(policyType);
-
             // Map that contains the condition mappings from apiGee to Gravitee
             Map<String, String> conditionMappings = graviteeELTranslator.getConditionMappings();
 
-            // Convert the policy using the found converter
-            converter.convert(condition, apiGeePolicy, phaseArray, phase, conditionMappings);
+            // Find the converter that supports the given policy type
+            var converter = getConverter(policyType);
+
+            // Convert the policy using the correct converter
+            if (converter != null) {
+                converter.convert(condition, apiGeePolicy, phaseArray, phase, conditionMappings);
+            } else {
+                // Used for converting policies that require the current folder location (e.g., JavaScript, XSLT, FlowCallout)
+                var advancedPolicyConverter = getAdvancedPolicyConverter(policyType);
+                advancedPolicyConverter.convert(condition, apiGeePolicy, phaseArray, phase, conditionMappings, currentFolderLocation);
+            }
         } catch (Exception e) {
             // Log the error if the converter fails
             log.warn(e.getMessage());
@@ -149,6 +159,13 @@ public class PolicyMapperUtil {
 
     private PolicyConverter getConverter(String policyType) {
         return policyConverters.stream()
+                .filter(converter -> converter.supports(policyType))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private AdvancedPolicyConverter getAdvancedPolicyConverter(String policyType) {
+        return advancedPolicyConverters.stream()
                 .filter(converter -> converter.supports(policyType))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No converter found for policy type: " + policyType));

@@ -39,12 +39,12 @@ public class ApiGeeToGraviteeConverter {
      * @throws XPathExpressionException If there is an error evaluating the XPath expression.
      * @throws IOException              If there is an error writing the JSON output.
      */
-    public String apiGeeToGraviteeConverter(Document rootXml, Document proxyXml, List<Document> apiGeePolicies, List<Document> targetEndpoints) throws XPathExpressionException, IOException {
+    public String apiGeeToGraviteeConverter(Document rootXml, Document proxyXml, List<Document> apiGeePolicies, List<Document> targetEndpoints, String apiProxyFolderLocation) throws XPathExpressionException, IOException {
         var graviteeConfig = objectMapper.createObjectNode();
         var planName = xPath.evaluate("/APIProxy/@name", rootXml);
 
         apiObjectConverter.mapApiObject(rootXml, proxyXml, graviteeConfig, targetEndpoints);
-        planObjectConverter.createPlan(graviteeConfig, planName, apiGeePolicies, targetEndpoints, proxyXml);
+        planObjectConverter.createPlan(graviteeConfig, planName, apiGeePolicies, targetEndpoints, proxyXml, apiProxyFolderLocation);
         documentationObjectConverter.mapDocumentation(graviteeConfig);
 
         return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(graviteeConfig);

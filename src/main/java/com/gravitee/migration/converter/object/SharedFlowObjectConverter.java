@@ -15,8 +15,8 @@ import javax.xml.xpath.XPathExpressionException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.gravitee.migration.util.constants.CommonConstants.REQUEST;
-import static com.gravitee.migration.util.constants.CommonConstants.RESPONSE;
+import static com.gravitee.migration.util.constants.CommonConstants.*;
+import static com.gravitee.migration.util.constants.object.SharedFlowObjectConstants.*;
 
 @Component
 @RequiredArgsConstructor
@@ -34,20 +34,21 @@ public class SharedFlowObjectConverter {
      * @param sharedFlowRootXml  The root XML document of the shared flow.
      * @param sharedFlowSteps    The steps document of the shared flow.
      * @param sharedFlowPolicies The list of policies associated with the shared flow.
+     * @param currentSharedFlowFolderLocation The location of the shared flow folder. (used for reading of JS, XSLT and XSLT policies, to reference the correct folder)
      * @return A list of JSON strings representing the shared flow configurations.
      * @throws Exception if an error occurs during the creation of the shared flow configurations.
      */
-    public List<String> createSharedFlow(Document sharedFlowRootXml, Document sharedFlowSteps, List<Document> sharedFlowPolicies) throws Exception {
+    public List<String> createSharedFlow(Document sharedFlowRootXml, Document sharedFlowSteps, List<Document> sharedFlowPolicies, String currentSharedFlowFolderLocation) throws Exception {
         List<String> sharedFlows = new ArrayList<>();
 
         // Create and add the request shared flow configuration
         ObjectNode requestSharedFlowConfig = createSharedFlowConfig(sharedFlowRootXml, REQUEST.toUpperCase(), "-Request");
-        populateSteps(requestSharedFlowConfig, sharedFlowSteps, sharedFlowPolicies, REQUEST);
+        populateSteps(requestSharedFlowConfig, sharedFlowSteps, sharedFlowPolicies, REQUEST, currentSharedFlowFolderLocation);
         sharedFlows.add(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestSharedFlowConfig));
 
         // Create and add the response shared flow configuration
         ObjectNode responseSharedFlowConfig = createSharedFlowConfig(sharedFlowRootXml, RESPONSE.toUpperCase(), "-Response");
-        populateSteps(responseSharedFlowConfig, sharedFlowSteps, sharedFlowPolicies, RESPONSE);
+        populateSteps(responseSharedFlowConfig, sharedFlowSteps, sharedFlowPolicies, RESPONSE, currentSharedFlowFolderLocation);
         sharedFlows.add(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(responseSharedFlowConfig));
 
         return sharedFlows;
@@ -57,19 +58,19 @@ public class SharedFlowObjectConverter {
         var sharedFlowName = xPath.evaluate("/SharedFlowBundle/@name", sharedFlowRootXml);
 
         ObjectNode sharedFlowConfig = objectMapper.createObjectNode();
-        sharedFlowConfig.put("crossId", sharedFlowName.concat(suffix));
-        sharedFlowConfig.put("prerequisiteMessage", "");
-        sharedFlowConfig.put("apiType", "PROXY");
-        sharedFlowConfig.put("phase", phase);
-        sharedFlowConfig.put("name", sharedFlowName.concat(suffix));
+        sharedFlowConfig.put(CROSS_ID, sharedFlowName.concat(suffix));
+        sharedFlowConfig.put(PRE_REQUISITE_MESSAGE, "");
+        sharedFlowConfig.put(API_TYPE, PROXY.toUpperCase());
+        sharedFlowConfig.put(PHASE, phase);
+        sharedFlowConfig.put(NAME, sharedFlowName.concat(suffix));
 
         return sharedFlowConfig;
     }
 
-    private void populateSteps(ObjectNode sharedFlowConfig, Document sharedFlowSteps, List<Document> sharedFlowPolicies, String flowType) throws XPathExpressionException {
-        var stepsArray = sharedFlowConfig.putArray("steps");
+    private void populateSteps(ObjectNode sharedFlowConfig, Document sharedFlowSteps, List<Document> sharedFlowPolicies, String flowType, String currentSharedFlowFolderLocation) throws XPathExpressionException {
+        var stepsArray = sharedFlowConfig.putArray(STEPS);
         var sharedFlowNodeSteps = (NodeList) xPath.evaluate("/SharedFlow/Step", sharedFlowSteps, XPathConstants.NODESET);
-        policyMapperUtil.applyPoliciesToFlowNodes(sharedFlowNodeSteps, sharedFlowPolicies, stepsArray, flowType, true);
+        policyMapperUtil.applyPoliciesToFlowNodes(sharedFlowNodeSteps, sharedFlowPolicies, stepsArray, flowType, true, currentSharedFlowFolderLocation);
     }
 
 }

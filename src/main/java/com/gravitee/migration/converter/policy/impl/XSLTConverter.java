@@ -1,8 +1,8 @@
-package com.gravitee.migration.converter.factory.policy;
+package com.gravitee.migration.converter.policy.impl;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.gravitee.migration.converter.factory.PolicyConverter;
+import com.gravitee.migration.converter.policy.AdvancedPolicyConverter;
 import com.gravitee.migration.service.filereader.FileReaderService;
 import com.gravitee.migration.util.constants.policy.PolicyTypeConstants;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +17,6 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Objects;
 
@@ -39,7 +37,7 @@ import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.A
  */
 @Component
 @RequiredArgsConstructor
-public class XSLTConverter implements PolicyConverter {
+public class XSLTConverter implements AdvancedPolicyConverter {
 
     private final XPath xPath;
     private final FileReaderService fileReaderService;
@@ -50,31 +48,18 @@ public class XSLTConverter implements PolicyConverter {
     }
 
     @Override
-    public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings) throws Exception {
+    public void convert(String condition, Document apiGeePolicy, ArrayNode phaseArray, String phase, Map<String, String> conditionMappings, String currentFolderLocation) throws Exception {
         // Extract properties
         var policyName = xPath.evaluate("/XSL/@name", apiGeePolicy);
         var outputVariable = xPath.evaluate("/XSL/OutputVariable", apiGeePolicy);
         // Extract the xslt document from the resources folder
-        var xslDocument = extractCorrespondingDocument(apiGeePolicy);
+        var xslDocument = extractCorrespondingDocument(apiGeePolicy, currentFolderLocation);
 
         createConfigurationForXslt(condition, policyName, xslDocument, apiGeePolicy, phaseArray, phase, conditionMappings);
         registerOutputVariableInContext(condition, outputVariable, phaseArray, policyName, phase, conditionMappings);
     }
 
-    private Document extractCorrespondingDocument(Document apiGeePolicy) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
-        // Extract folder we are currently located in
-        String currentFolder = fileReaderService.getCurrentFolder();
-
-        // If we are in a shared flow, we need to find the first child folder
-        String resourcesPath;
-        if(currentFolder.contains("\\SharedFlows\\")){
-            Path childFolder = fileReaderService.findFirstChildFolder(currentFolder);
-            resourcesPath = Paths.get(childFolder.toString(), RESOURCES).toString();
-        }
-        else {
-            resourcesPath = Paths.get(currentFolder, RESOURCES).toString();
-
-        }
+    private Document extractCorrespondingDocument(Document apiGeePolicy, String currentFolderLocation) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         // Get the resources path
         // Extract the resource URL from the policy
         var resourceUrl = xPath.evaluate("/XSL/ResourceURL", apiGeePolicy);
@@ -84,7 +69,7 @@ public class XSLTConverter implements PolicyConverter {
         var fileName = resourceUrl.substring(resourceUrl.indexOf("//") + 2);
 
         // Read the policies and extract the corresponding resource document
-        var sharedFlowResources = fileReaderService.parseXmlFiles(resourcesPath, folderName);
+        var sharedFlowResources = fileReaderService.readFiles(currentFolderLocation, RESOURCES + "/" + folderName);
 
         return fileReaderService.findDocumentByName(sharedFlowResources, fileName);
     }
@@ -139,5 +124,4 @@ public class XSLTConverter implements PolicyConverter {
             attributeObject.put(VALUE, Objects.equals(scope, REQUEST) ? REQUEST_CONTENT_WRAPPED : RESPONSE_CONTENT_WRAPPED);
         }
     }
-
 }
