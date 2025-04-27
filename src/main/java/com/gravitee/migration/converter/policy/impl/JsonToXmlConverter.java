@@ -1,8 +1,8 @@
-package com.gravitee.migration.converter.factory.policy;
+package com.gravitee.migration.converter.policy.impl;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.converter.factory.dto.JsonToXmlDto;
+import com.gravitee.migration.converter.policy.PolicyConverter;
+import com.gravitee.migration.converter.dto.JsonToXmlDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

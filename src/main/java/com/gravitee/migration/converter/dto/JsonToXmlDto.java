@@ -1,4 +1,4 @@
-package com.gravitee.migration.converter.factory.dto;
+package com.gravitee.migration.converter.dto;
 
 public record JsonToXmlDto(
         String name,

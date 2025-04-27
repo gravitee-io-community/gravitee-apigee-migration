@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gravitee.migration.enums.SignatureEnum;
 import com.gravitee.migration.infrastructure.configuration.GraviteeELTranslator;
-import com.gravitee.migration.service.filereader.FileReaderService;
+import com.gravitee.migration.service.filewriter.FileWriterService;
 import com.gravitee.migration.util.policy.PolicyMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,14 +40,13 @@ import static com.gravitee.migration.util.constants.policy.PolicyTypeConstants.J
 @RequiredArgsConstructor
 public class PlanObjectConverter {
 
-    private final XPath xPath;
-    private final FileReaderService fileReaderService;
-    private final GraviteeELTranslator graviteeELTranslator;
-
     @Value("${gravitee.dictionary.name}")
     private String dictionaryName;
-
     private static final String ROUTING_POLICY_PATTERN = ".*";
+
+    private final XPath xPath;
+    private final FileWriterService fileWriterService;
+    private final GraviteeELTranslator graviteeELTranslator;
     private final PolicyMapperUtil policyMapperUtil;
     private final ApiObjectConverter apiObjectConverter;
 
@@ -60,7 +59,7 @@ public class PlanObjectConverter {
      * @param targetEndpoints The list of target endpoints in ApiGee.
      * @param proxyXml        The proxy XML document.
      */
-    public void createPlan(ObjectNode graviteeNode, String planName, List<Document> apiGeePolicies, List<Document> targetEndpoints, Document proxyXml) throws XPathExpressionException, JsonProcessingException {
+    public void createPlan(ObjectNode graviteeNode, String planName, List<Document> apiGeePolicies, List<Document> targetEndpoints, Document proxyXml, String apiProxyFolderLocation) throws XPathExpressionException, JsonProcessingException {
 
         var plansArray = graviteeNode.putArray(PLANS);
         // We are creating plans based on what type of policies are used in the API (JWT, API Key, etc.)
@@ -70,61 +69,60 @@ public class PlanObjectConverter {
         var flowsArray = planNode.putArray(FLOWS);
 
         // Map flows from the proxy XML located in the proxies folder
-        buildFlowsFromProxyXml(apiGeePolicies, proxyXml, targetEndpoints, flowsArray);
+        buildFlowsFromProxyXml(apiGeePolicies, proxyXml, targetEndpoints, flowsArray, apiProxyFolderLocation);
         buildPlansSecurity(planNode, plansArray, planName);
         processCachePolicies();
     }
 
-
-    private void buildFlowsFromProxyXml(List<Document> apiGeePolicies, Document proxyXml, List<Document> targetEndpoints, ArrayNode flowsArray) throws XPathExpressionException {
+    private void buildFlowsFromProxyXml(List<Document> apiGeePolicies, Document proxyXml, List<Document> targetEndpoints, ArrayNode flowsArray, String apiProxyFolderLocation) throws XPathExpressionException {
         // Add PreFlow Request steps to the request array
-        buildPreOrPostFlowSteps("/*/PreFlow/Request/Step", REQUEST, "PreFlow-Request", apiGeePolicies, proxyXml, flowsArray);
+        buildPreOrPostFlowSteps("/*/PreFlow/Request/Step", REQUEST, "PreFlow-Request", apiGeePolicies, proxyXml, flowsArray, apiProxyFolderLocation);
 
         // Add Conditional flows to the flows array
-        buildConditionalFlows(proxyXml, flowsArray, apiGeePolicies, targetEndpoints);
+        buildConditionalFlows(proxyXml, flowsArray, apiGeePolicies, targetEndpoints, apiProxyFolderLocation);
 
         // Add PreFlow Response steps to the response array
-        buildPreOrPostFlowSteps("/*/PostFlow/Response/Step", RESPONSE, "PostFlow-Response", apiGeePolicies, proxyXml, flowsArray);
+        buildPreOrPostFlowSteps("/*/PostFlow/Response/Step", RESPONSE, "PostFlow-Response", apiGeePolicies, proxyXml, flowsArray, apiProxyFolderLocation);
     }
 
-    private void buildPreOrPostFlowSteps(String xpathExpression, String phase, String name, List<Document> apiGeePolicies, Document proxyXml, ArrayNode flowsArray) throws XPathExpressionException {
+    private void buildPreOrPostFlowSteps(String xpathExpression, String phase, String name, List<Document> apiGeePolicies, Document proxyXml, ArrayNode flowsArray, String apiProxyFolderLocation) throws XPathExpressionException {
         var flowNodes = (NodeList) xPath.evaluate(xpathExpression, proxyXml, XPathConstants.NODESET);
         // PreFlow and PostFlow have no conditions - they are always executed
-        buildProxyFlow(flowNodes, flowsArray, phase, name, apiGeePolicies, null);
+        buildProxyFlow(flowNodes, flowsArray, phase, name, apiGeePolicies, null, apiProxyFolderLocation);
     }
 
-    private void buildConditionalFlows(Document proxyXml, ArrayNode flowsArray, List<Document> apiGeePolicies, List<Document> targetEndpoints) throws XPathExpressionException {
+    private void buildConditionalFlows(Document proxyXml, ArrayNode flowsArray, List<Document> apiGeePolicies, List<Document> targetEndpoints, String apiProxyFolderLocation) throws XPathExpressionException {
         // Extract all conditional flows from the proxyXml
         var conditionalFlows = (NodeList) xPath.evaluate("/*/Flows/Flow", proxyXml, XPathConstants.NODESET);
 
         // For each flow add the request steps to the flows array
-        processConditionalFlowSteps(conditionalFlows, "Request/Step", REQUEST, "-Request", apiGeePolicies, flowsArray);
+        processConditionalFlowSteps(conditionalFlows, "Request/Step", REQUEST, "-Request", apiGeePolicies, flowsArray, apiProxyFolderLocation);
 
         // Add PostFlow Request steps to the request array
-        buildPreOrPostFlowSteps("/*/PostFlow/Request/Step", REQUEST, "PostFlow-Request", apiGeePolicies, proxyXml, flowsArray);
+        buildPreOrPostFlowSteps("/*/PostFlow/Request/Step", REQUEST, "PostFlow-Request", apiGeePolicies, proxyXml, flowsArray, apiProxyFolderLocation);
 
         // Build routing rules
-        buildRouteRules(apiGeePolicies, proxyXml, targetEndpoints, flowsArray);
+        buildRouteRules(apiGeePolicies, proxyXml, targetEndpoints, flowsArray, apiProxyFolderLocation);
 
         // Add PreFlow Response steps to the response array
-        buildPreOrPostFlowSteps("/*/PreFlow/Response/Step", RESPONSE, "PreFlow-Response", apiGeePolicies, proxyXml, flowsArray);
+        buildPreOrPostFlowSteps("/*/PreFlow/Response/Step", RESPONSE, "PreFlow-Response", apiGeePolicies, proxyXml, flowsArray, apiProxyFolderLocation);
 
         // For each flow add the response steps to the flows array
-        processConditionalFlowSteps(conditionalFlows, "Response/Step", RESPONSE, "-Response", apiGeePolicies, flowsArray);
+        processConditionalFlowSteps(conditionalFlows, "Response/Step", RESPONSE, "-Response", apiGeePolicies, flowsArray, apiProxyFolderLocation);
     }
 
-    private void processConditionalFlowSteps(NodeList conditionalFlows, String stepXPath, String phase, String suffix, List<Document> apiGeePolicies, ArrayNode flowsArray) throws XPathExpressionException {
+    private void processConditionalFlowSteps(NodeList conditionalFlows, String stepXPath, String phase, String suffix, List<Document> apiGeePolicies, ArrayNode flowsArray, String apiProxyFolderLocation) throws XPathExpressionException {
         for (int i = 0; i < conditionalFlows.getLength(); i++) {
             var conditionalFlow = conditionalFlows.item(i);
             var conditionalFlowName = xPath.evaluate("@name", conditionalFlow);
             var conditionalFlowCondition = xPath.evaluate("Condition", conditionalFlow);
 
             var flowNodes = (NodeList) xPath.evaluate(stepXPath, conditionalFlow, XPathConstants.NODESET);
-            buildProxyFlow(flowNodes, flowsArray, phase, conditionalFlowName.concat(suffix), apiGeePolicies, conditionalFlowCondition);
+            buildProxyFlow(flowNodes, flowsArray, phase, conditionalFlowName.concat(suffix), apiGeePolicies, conditionalFlowCondition, apiProxyFolderLocation);
         }
     }
 
-    private void buildProxyFlow(NodeList steps, ArrayNode flowsArray, String phase, String name, List<Document> apiGeePolicies, String condition) throws XPathExpressionException {
+    private void buildProxyFlow(NodeList steps, ArrayNode flowsArray, String phase, String name, List<Document> apiGeePolicies, String condition, String apiProxyFolderLocation) throws XPathExpressionException {
         if (steps != null && steps.getLength() > 0) {
 
             // Create the flow object
@@ -135,7 +133,7 @@ public class PlanObjectConverter {
             // Process the steps inside the flow and map them to the corresponding policies
             for (int i = 0; i < steps.getLength(); i++) {
                 var stepNode = steps.item(i);
-                policyMapperUtil.findAndApplyMatchingPolicy(stepNode, apiGeePolicies, scopeArray, phase, false);
+                policyMapperUtil.findAndApplyMatchingPolicy(stepNode, apiGeePolicies, scopeArray, phase, false, apiProxyFolderLocation);
             }
         }
     }
@@ -155,18 +153,18 @@ public class PlanObjectConverter {
         return flowNode;
     }
 
-    private void buildRouteRules(List<Document> apiGeePolicies, Document proxyXml, List<Document> targetEndpoints, ArrayNode flowsArray) throws XPathExpressionException {
+    private void buildRouteRules(List<Document> apiGeePolicies, Document proxyXml, List<Document> targetEndpoints, ArrayNode flowsArray, String apiProxyFolderLocation) throws XPathExpressionException {
         // Extract all route rules from the proxyXml
         NodeList routeRules = (NodeList) xPath.evaluate("/ProxyEndpoint/RouteRule", proxyXml, XPathConstants.NODESET);
 
         // Process each route rule
         for (int i = 0; i < routeRules.getLength(); i++) {
             Node routeRule = routeRules.item(i);
-            processRouteRule(routeRule, apiGeePolicies, targetEndpoints, flowsArray);
+            processRouteRule(routeRule, apiGeePolicies, targetEndpoints, flowsArray, apiProxyFolderLocation);
         }
     }
 
-    private void processRouteRule(Node routeRule, List<Document> apiGeePolicies, List<Document> targetEndpoints, ArrayNode flowsArray) throws XPathExpressionException {
+    private void processRouteRule(Node routeRule, List<Document> apiGeePolicies, List<Document> targetEndpoints, ArrayNode flowsArray, String apiProxyFolderLocation) throws XPathExpressionException {
         // Extract the target endpoint name and condition
         String routeRuleTargetEndpoint = xPath.evaluate("TargetEndpoint", routeRule);
         String condition = xPath.evaluate("Condition", routeRule);
@@ -175,7 +173,7 @@ public class PlanObjectConverter {
         Document matchingTargetEndpoint = findMatchingTargetEndpoint(routeRuleTargetEndpoint, targetEndpoints);
         if (matchingTargetEndpoint != null) {
             // Build the flows for the matching target endpoint
-            buildTargetEndpointFlows(apiGeePolicies, matchingTargetEndpoint, flowsArray, condition);
+            buildTargetEndpointFlows(apiGeePolicies, matchingTargetEndpoint, flowsArray, condition, apiProxyFolderLocation);
         }
     }
 
@@ -192,7 +190,7 @@ public class PlanObjectConverter {
 
                     var cleanedBaseUrl = removeCurlyBraces(baseUrl);
 
-                    fileReaderService.addValueToDictionaryMap(cleanedBaseUrl, CHANGE_ME);
+                    fileWriterService.addValueToDictionaryMap(cleanedBaseUrl, CHANGE_ME);
                 }
                 return targetEndpoint;
             }
@@ -200,7 +198,7 @@ public class PlanObjectConverter {
         return null;
     }
 
-    private void buildTargetEndpointFlows(List<Document> apiGeePolicies, Document targetEndpoint, ArrayNode flowsArray, String condition) throws XPathExpressionException {
+    private void buildTargetEndpointFlows(List<Document> apiGeePolicies, Document targetEndpoint, ArrayNode flowsArray, String condition, String apiProxyFolderLocation) throws XPathExpressionException {
         // Extract flow name
         String targetEndpointName = xPath.evaluate("/TargetEndpoint/@name", targetEndpoint);
 
@@ -212,20 +210,20 @@ public class PlanObjectConverter {
         ArrayNode responseArray = flowObject.putArray(RESPONSE);
 
         // Add PreFlow Request steps to the request array and PostFlow Request steps to the response array
-        processFlowNodes("/TargetEndpoint/PreFlow/Request/Step", targetEndpoint, apiGeePolicies, requestArray, REQUEST);
-        processFlowNodes("/TargetEndpoint/PostFlow/Request/Step", targetEndpoint, apiGeePolicies, requestArray, REQUEST);
+        processFlowNodes("/TargetEndpoint/PreFlow/Request/Step", targetEndpoint, apiGeePolicies, requestArray, REQUEST, apiProxyFolderLocation);
+        processFlowNodes("/TargetEndpoint/PostFlow/Request/Step", targetEndpoint, apiGeePolicies, requestArray, REQUEST, apiProxyFolderLocation);
 
         // Add dynamic routing to override the url and send request to the backend service specified in the target endpoint
         buildRoutingPolicy(targetEndpoint, requestArray);
 
         // Add PreFlow Response steps to the response array and PostFlow Response steps to the response array
-        processFlowNodes("/TargetEndpoint/PreFlow/Response/Step", targetEndpoint, apiGeePolicies, responseArray, RESPONSE);
-        processFlowNodes("/TargetEndpoint/PostFlow/Response/Step", targetEndpoint, apiGeePolicies, responseArray, RESPONSE);
+        processFlowNodes("/TargetEndpoint/PreFlow/Response/Step", targetEndpoint, apiGeePolicies, responseArray, RESPONSE, apiProxyFolderLocation);
+        processFlowNodes("/TargetEndpoint/PostFlow/Response/Step", targetEndpoint, apiGeePolicies, responseArray, RESPONSE, apiProxyFolderLocation);
     }
 
-    private void processFlowNodes(String xpathExpression, Document targetEndpoint, List<Document> apiGeePolicies, ArrayNode phaseArray, String phase) throws XPathExpressionException {
+    private void processFlowNodes(String xpathExpression, Document targetEndpoint, List<Document> apiGeePolicies, ArrayNode phaseArray, String phase, String apiGeeFolderLocation) throws XPathExpressionException {
         NodeList flowNodes = (NodeList) xPath.evaluate(xpathExpression, targetEndpoint, XPathConstants.NODESET);
-        policyMapperUtil.applyPoliciesToFlowNodes(flowNodes, apiGeePolicies, phaseArray, phase, false);
+        policyMapperUtil.applyPoliciesToFlowNodes(flowNodes, apiGeePolicies, phaseArray, phase, false, apiGeeFolderLocation);
     }
 
     private void buildRoutingPolicy(Document targetEndpoint, ArrayNode requestArray) throws XPathExpressionException {

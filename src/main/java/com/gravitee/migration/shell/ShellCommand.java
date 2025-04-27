@@ -21,7 +21,7 @@ public class ShellCommand {
      * @param apiProxyFolderLocation The folder location of the APIProxy that needs to be migrated.
      */
     @ShellMethod(key = "start", value = "Start the migration")
-    public void startFullMigration(@ShellOption(help = "The APIProxy folder location.") String apiProxyFolderLocation) {
-        migrationService.start(apiProxyFolderLocation);
+    public String start(@ShellOption(help = "The APIProxy folder location.") String apiProxyFolderLocation) {
+        return migrationService.start(apiProxyFolderLocation);
     }
 }

@@ -1,4 +1,4 @@
-package com.gravitee.migration.converter.factory.policy;
+package com.gravitee.migration.converter.policy.impl;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import lombok.RequiredArgsConstructor;

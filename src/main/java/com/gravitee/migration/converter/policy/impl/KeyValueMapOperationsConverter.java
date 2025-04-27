@@ -1,9 +1,9 @@
-package com.gravitee.migration.converter.factory.policy;
+package com.gravitee.migration.converter.policy.impl;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.gravitee.migration.converter.factory.PolicyConverter;
-import com.gravitee.migration.service.filereader.FileReaderService;
+import com.gravitee.migration.converter.policy.PolicyConverter;
+import com.gravitee.migration.service.filewriter.FileWriterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,7 +14,6 @@ import org.w3c.dom.NodeList;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-
 import java.util.Map;
 
 import static com.gravitee.migration.util.GraviteeCliUtils.createBasePhaseObject;
@@ -37,7 +36,7 @@ public class KeyValueMapOperationsConverter implements PolicyConverter {
     private String dictionaryName;
 
     private final XPath xPath;
-    private final FileReaderService fileReaderService;
+    private final FileWriterService fileWriterService;
 
     @Override
     public boolean supports(String policyType) {
@@ -123,7 +122,7 @@ public class KeyValueMapOperationsConverter implements PolicyConverter {
         // Handle the parameter value when "ref" is not present
         String parameterTextContent = xPath.evaluate("Key/Parameter/text()", getNode);
         // Add the parameter value to the dictionary, with a value that needs to be replaced
-        fileReaderService.addValueToDictionaryMap(parameterTextContent, CHANGE_ME);
+        fileWriterService.addValueToDictionaryMap(parameterTextContent, CHANGE_ME);
         attributeObject.put(VALUE, String.format(DICTIONARY_FORMAT_WRAPPED, dictionaryName, parameterTextContent));
     }
 
@@ -136,7 +135,7 @@ public class KeyValueMapOperationsConverter implements PolicyConverter {
             var putParameter = putParameters.item(i);
             var parameterName = xPath.evaluate("Key/Parameter/text()", putParameter);
             var parameterValue = xPath.evaluate("Value", putParameter);
-            fileReaderService.addValueToDictionaryMap(parameterName, parameterValue);
+            fileWriterService.addValueToDictionaryMap(parameterName, parameterValue);
         }
     }
 }

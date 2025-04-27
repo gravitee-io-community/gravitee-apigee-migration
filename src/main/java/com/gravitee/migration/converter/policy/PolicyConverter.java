@@ -1,4 +1,4 @@
-package com.gravitee.migration.converter.factory;
+package com.gravitee.migration.converter.policy;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.w3c.dom.Document;
